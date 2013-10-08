@@ -20,19 +20,22 @@
 // Camera configuration.
 //
 #ifdef _WIN32
-char			*vconf = "Data\\WDM_camera_flipV.xml";
+//Config for debug folder
+char			*vconf = "..\\Data\\WDM_camera_flipV.xml";
+char           *cparam_name    = "..\\Data\\camera_para.dat";
+char           *patt_name      = "..\\Data\\patt.hiro";
 #else
 char			*vconf = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+char           *cparam_name    = "Data/camera_para.dat";
+char           *patt_name      = "Data/patt.hiro";
 #endif
 
 int             xsize, ysize;
 int             thresh = 100;
 int             count = 0;
 
-char           *cparam_name    = "Data/camera_para.dat";
 ARParam         cparam;
 
-char           *patt_name      = "Data/patt.hiro";
 int             patt_id;
 double          patt_width     = 80.0;
 double          patt_center[2] = {0.0, 0.0};
