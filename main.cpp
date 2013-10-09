@@ -186,7 +186,7 @@ static void mainLoop(void)
         cleanup();
         exit(0);
     }
-
+	printf("num = %d\n", marker_num);
     arVideoCapNext();
 
 	if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
