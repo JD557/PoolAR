@@ -42,7 +42,7 @@ double    gl_para[16];
 GLfloat   mat_ambient[]     = {0.7, 0.7, 0.7, 1.0};
 GLfloat   mat_diffuse[]     = {0.9, 0.9, 0.9, 1.0};
 GLfloat   mat_flash[]       = {0.3, 0.3, 0.3, 1.0};
-GLfloat   mat_zero[]        = {0.0, 0.0, 0.0, 1.0};
+GLfloat   mat_zero[]        = {0.1, 0.1, 0.1, 1.0};
 GLfloat   mat_flash_shiny[] = {5.0};
 GLfloat   light_position[]  = {100.0,-200.0,200.0,0.0};
 GLfloat   ambi[]            = {0.1, 0.1, 0.1, 0.1};
@@ -76,7 +76,6 @@ void drawHole(int sides, double radius, double depth) {
 		double angle=2.0*3.14159*(double)i/(double)sides;
 		double nextangle=2.0*3.14159*(double)(i+1)/(double)sides;
 		glBegin(GL_QUADS);
-			glNormal3f(cos(angle),sin(angle),0.0f);
 			glVertex3f(radius*cos(angle),radius*sin(angle),0.0f);
 			glVertex3f(radius*cos(angle),radius*sin(angle),-1.0*depth);
 			glVertex3f(radius*cos(nextangle),radius*sin(nextangle),-1.0*depth);
@@ -89,12 +88,12 @@ void drawHole(int sides, double radius, double depth) {
 	for (i=0;i<sides;++i) {
 		double angle=2.0*3.14159*(double)i/(double)sides;
 		double nextangle=2.0*3.14159*(double)(i+1)/(double)sides;
-		glNormal3f(cos(angle),sin(angle),0.0f);
+		glNormal3f(-cos(angle),-sin(angle),0.0f);
 		holeMaterial();
 		glVertex3f(radius*cos(angle),radius*sin(angle),0.0f);
 		zeroMaterial();
 		glVertex3f(radius*cos(angle),radius*sin(angle),-1.0*depth);
-		glNormal3f(cos(nextangle),sin(nextangle),0.0f);
+		glNormal3f(-cos(nextangle),-sin(nextangle),0.0f);
 		glVertex3f(radius*cos(nextangle),radius*sin(nextangle),-1.0*depth);
 		holeMaterial();
 		glVertex3f(radius*cos(nextangle),radius*sin(nextangle),0.0f);
@@ -242,7 +241,7 @@ static void draw( void )
     glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
     glMatrixMode(GL_MODELVIEW);
 
-	drawHole(50,50.0,100.0);
+	drawHole(50,25.0,25.0);
 
     glDisable( GL_LIGHTING );
 
