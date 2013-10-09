@@ -20,32 +20,52 @@
 // Camera configuration.
 //
 #ifdef _WIN32
-//Config for debug folder
 char			*vconf = "Data\\WDM_camera_flipV.xml";
-char           *cparam_name    = "Data\\camera_para.dat";
-char           *patt_name      = "Data\\patt.hiro";
 #else
-char			*vconf = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
-char           *cparam_name    = "Data/camera_para.dat";
-char           *patt_name      = "Data/patt.hiro";
+char			*vconf = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 #endif
 
 int             xsize, ysize;
 int             thresh = 100;
 int             count = 0;
 
+char           *cparam_name    = "Data/camera_para.dat";
 ARParam         cparam;
 
+char           *patt_name      = "Data/patt.hiro";
 int             patt_id;
 double          patt_width     = 80.0;
 double          patt_center[2] = {0.0, 0.0};
 double          patt_trans[3][4];
+
+double    gl_para[16];
+GLfloat   mat_ambient[]     = {0.7, 0.7, 0.7, 1.0};
+GLfloat   mat_diffuse[]     = {0.9, 0.9, 0.9, 1.0};
+GLfloat   mat_flash[]       = {0.3, 0.3, 0.3, 1.0};
+GLfloat   mat_zero[]        = {0.0, 0.0, 0.0, 1.0};
+GLfloat   mat_flash_shiny[] = {5.0};
+GLfloat   light_position[]  = {100.0,-200.0,200.0,0.0};
+GLfloat   ambi[]            = {0.1, 0.1, 0.1, 0.1};
+GLfloat   lightZeroColor[]  = {0.9, 0.9, 0.9, 0.1};
 
 static void   init(void);
 static void   cleanup(void);
 static void   keyEvent( unsigned char key, int x, int y);
 static void   mainLoop(void);
 static void   draw( void );
+
+void holeMaterial() {
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_flash);
+    glMaterialfv(GL_FRONT, GL_SHININESS, mat_flash_shiny);	
+    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+};
+void zeroMaterial() {
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_zero);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_zero);
+    glMaterialfv(GL_FRONT, GL_SHININESS, mat_zero);	
+    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_zero);
+};
 
 void drawHole(int sides, double radius, double depth) {
 	int i=0;
@@ -65,20 +85,24 @@ void drawHole(int sides, double radius, double depth) {
 	}
 	glColorMask(1,1,1,1);
 	glCullFace(GL_FRONT);
+	glBegin(GL_QUADS);
 	for (i=0;i<sides;++i) {
 		double angle=2.0*3.14159*(double)i/(double)sides;
 		double nextangle=2.0*3.14159*(double)(i+1)/(double)sides;
-		glBegin(GL_QUADS);
-			glNormal3f(cos(angle),sin(angle),0.0f);
-			glVertex3f(radius*cos(angle),radius*sin(angle),0.0f);
-			glVertex3f(radius*cos(angle),radius*sin(angle),-1.0*depth);
-			glNormal3f(cos(nextangle),sin(nextangle),0.0f);
-			glVertex3f(radius*cos(nextangle),radius*sin(nextangle),-1.0*depth);
-			glVertex3f(radius*cos(nextangle),radius*sin(nextangle),0.0f);
-		glEnd();
-	}	
+		glNormal3f(cos(angle),sin(angle),0.0f);
+		holeMaterial();
+		glVertex3f(radius*cos(angle),radius*sin(angle),0.0f);
+		zeroMaterial();
+		glVertex3f(radius*cos(angle),radius*sin(angle),-1.0*depth);
+		glNormal3f(cos(nextangle),sin(nextangle),0.0f);
+		glVertex3f(radius*cos(nextangle),radius*sin(nextangle),-1.0*depth);
+		holeMaterial();
+		glVertex3f(radius*cos(nextangle),radius*sin(nextangle),0.0f);
+	}
+	glEnd();
 	glCullFace(GL_BACK);
 	glBegin(GL_POLYGON);
+	zeroMaterial();
 	for (i=0;i<sides;++i) {
 		double angle=2.0*3.14159*(double)i/(double)sides;
 		double nextangle=2.0*3.14159*(double)(i+1)/(double)sides;
@@ -196,14 +220,6 @@ static void cleanup(void)
 
 static void draw( void )
 {
-    double    gl_para[16];
-    GLfloat   mat_ambient[]     = {0.0, 0.0, 1.0, 1.0};
-    GLfloat   mat_flash[]       = {0.0, 0.0, 1.0, 1.0};
-    GLfloat   mat_flash_shiny[] = {50.0};
-    GLfloat   light_position[]  = {100.0,-200.0,200.0,0.0};
-    GLfloat   ambi[]            = {0.1, 0.1, 0.1, 0.1};
-    GLfloat   lightZeroColor[]  = {0.9, 0.9, 0.9, 0.1};
-    
     argDrawMode3D();
     argDraw3dCamera( 0, 0 );
     glClearDepth( 1.0 );
@@ -226,7 +242,7 @@ static void draw( void )
     glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
     glMatrixMode(GL_MODELVIEW);
 
-	drawHole(25,50.0,50.0);
+	drawHole(50,50.0,100.0);
 
     glDisable( GL_LIGHTING );
 
