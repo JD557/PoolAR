@@ -1,0 +1,10 @@
+#the number of patterns to be recognized
+1
+
+#marker 1
+Data/patt.sample1
+40.0
+0.0 0.0
+1.0000 0.0000 0.0000 0.0000
+0.0000 1.0000 0.0000 0.0000
+0.0000 0.0000 1.0000 0.0000
