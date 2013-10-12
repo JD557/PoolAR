@@ -27,7 +27,7 @@ char			*vconf = "Data\\WDM_camera_flipV.xml";
 char            *cparam_name = "Data\\camera_para.dat";
 char            *config_name = "Data\\marker.dat";
 #else
-char			*vconf = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+char			*vconf = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 char            *cparam_name    = "Data/camera_para.dat";
 char            *config_name = "Data/marker.dat";
 #endif
@@ -60,8 +60,8 @@ Model hole;
 
 int main(int argc, char **argv)
 {
-	//hole = Model("Assets/pool_table.obj");
-	hole = newHole(25,6.15,6.15);
+	hole = Model("Assets/pool_table.obj");
+	//hole = newHole(25,6.15,6.15);
 	glutInit(&argc, argv);
 	init();
 
@@ -128,14 +128,14 @@ static void mainLoop(void)
         cleanup();
         exit(0);
     }
-	printf("num = %d\n", marker_num);
+	//printf("num = %d\n", marker_num);
     arVideoCapNext();
 
 	if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
 		argSwapBuffers();
         return;
     }
-    printf("err = %f\n", err);
+    //printf("err = %f\n", err);
     if(err > 100.0 ) {
         argSwapBuffers();
         return;
@@ -224,7 +224,6 @@ static void draw( double trans1[3][4], double trans2[3][4], int mode )
 	glCullFace(GL_FRONT);
 	glColorMask(1,1,1,1);*/
 	hole.render();
-	printf("%d\n",hole.tris.size());
 
     glDisable( GL_LIGHTING );
 
