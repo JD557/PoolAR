@@ -15,7 +15,8 @@
 #include <AR/param.h>
 #include <AR/ar.h>
 #include <AR/arMulti.h>
-#include <math.h>
+#include <cmath>
+#include "model.hpp"
 
 
 //
@@ -45,11 +46,6 @@ double          patt_center[2] = {0.0, 0.0};
 double          patt_trans[3][4];
 
 double    gl_para[16];
-GLfloat   mat_ambient[]     = {0.7, 0.7, 0.7, 1.0};
-GLfloat   mat_diffuse[]     = {0.9, 0.9, 0.9, 1.0};
-GLfloat   mat_flash[]       = {0.3, 0.3, 0.3, 1.0};
-GLfloat   mat_zero[]        = {0.1, 0.1, 0.1, 1.0};
-GLfloat   mat_flash_shiny[] = {5.0};
 GLfloat   light_position[]  = {100.0,-200.0,200.0,0.0};
 GLfloat   ambi[]            = {0.1, 0.1, 0.1, 0.1};
 GLfloat   lightZeroColor[]  = {0.9, 0.9, 0.9, 0.1};
@@ -60,66 +56,12 @@ static void   keyEvent( unsigned char key, int x, int y);
 static void   mainLoop(void);
 static void   draw( double trans1[3][4], double trans2[3][4], int mode );
 
-void holeMaterial() {
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_flash);
-    glMaterialfv(GL_FRONT, GL_SHININESS, mat_flash_shiny);	
-    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-};
-void zeroMaterial() {
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_zero);
-    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_zero);
-    glMaterialfv(GL_FRONT, GL_SHININESS, mat_zero);	
-    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_zero);
-};
-
-void drawHole(int sides, double radius, double depth) {
-	int i=0;
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glColorMask(0,0,0,0);
-	for (i=0;i<sides;++i) {
-		double angle=2.0*3.14159*(double)i/(double)sides;
-		double nextangle=2.0*3.14159*(double)(i+1)/(double)sides;
-		glBegin(GL_QUADS);
-			glVertex3f(radius*cos(angle),radius*sin(angle),0.0f);
-			glVertex3f(radius*cos(angle),radius*sin(angle),-1.0*depth);
-			glVertex3f(radius*cos(nextangle),radius*sin(nextangle),-1.0*depth);
-			glVertex3f(radius*cos(nextangle),radius*sin(nextangle),0.0f);
-		glEnd();
-	}
-	glColorMask(1,1,1,1);
-	glCullFace(GL_FRONT);
-	glBegin(GL_QUADS);
-	for (i=0;i<sides;++i) {
-		double angle=2.0*3.14159*(double)i/(double)sides;
-		double nextangle=2.0*3.14159*(double)(i+1)/(double)sides;
-		glNormal3f(-cos(angle),-sin(angle),0.0f);
-		holeMaterial();
-		glVertex3f(radius*cos(angle),radius*sin(angle),0.0f);
-		zeroMaterial();
-		glVertex3f(radius*cos(angle),radius*sin(angle),-1.0*depth);
-		glNormal3f(-cos(nextangle),-sin(nextangle),0.0f);
-		glVertex3f(radius*cos(nextangle),radius*sin(nextangle),-1.0*depth);
-		holeMaterial();
-		glVertex3f(radius*cos(nextangle),radius*sin(nextangle),0.0f);
-	}
-	glEnd();
-	glCullFace(GL_BACK);
-	glBegin(GL_POLYGON);
-	zeroMaterial();
-	for (i=0;i<sides;++i) {
-		double angle=2.0*3.14159*(double)i/(double)sides;
-		double nextangle=2.0*3.14159*(double)(i+1)/(double)sides;
-		glNormal3f(0.0,0.0,1.0);
-		glVertex3f(radius*cos(angle),radius*sin(angle),-1.0*depth);
-	}
-	glEnd();
-	glDisable(GL_CULL_FACE);
-}
+Model hole;
 
 int main(int argc, char **argv)
 {
+	//hole = Model("Assets/pool_table.obj");
+	hole = newHole(25,6.15,6.15);
 	glutInit(&argc, argv);
 	init();
 
@@ -170,7 +112,7 @@ static void mainLoop(void)
 	double          err;
     int             i;
 
-    /* grab a vide frame */
+    /* grab a video frame */
     if( (dataPtr = (ARUint8 *)arVideoGetImage()) == NULL ) {
         arUtilSleep(2);
         return;
@@ -199,24 +141,6 @@ static void mainLoop(void)
         return;
     }
 
-    /* check for object visibility */
-    /*k = -1;
-    for( j = 0; j < marker_num; j++ ) {
-        if( patt_id == marker_info[j].id ) {
-            if( k == -1 ) k = j;
-            else if( marker_info[k].cf < marker_info[j].cf ) k = j;
-        }
-    }
-    if( k == -1 ) {
-        argSwapBuffers();
-        return;
-    }
-	*/
-    /* get the transformation between the marker and the real camera */
-    /*arGetTransMat(&marker_info[k], patt_center, patt_width, patt_trans);
-
-    draw();*/
-
 	argDrawMode3D();
     argDraw3dCamera( 0, 0 );
     glClearDepth( 1.0 );
@@ -231,33 +155,6 @@ static void mainLoop(void)
 
 static void init( void )
 {
-	/*
-    ARParam  wparam;
-	
-   
-    if( arVideoOpen( vconf ) < 0 ) exit(0);
-   
-    if( arVideoInqSize(&xsize, &ysize) < 0 ) exit(0);
-    printf("Image size (x,y) = (%d,%d)\n", xsize, ysize);
-
-    
-    if( arParamLoad(cparam_name, 1, &wparam) < 0 ) {
-        printf("Camera parameter load error !!\n");
-        exit(0);
-    }
-    arParamChangeSize( &wparam, xsize, ysize, &cparam );
-    arInitCparam( &cparam );
-    printf("*** Camera Parameter ***\n");
-    arParamDisp( &cparam );
-
-    if( (patt_id=arLoadPatt(patt_1)) < 0 ) {
-        printf("pattern load error !!\n");
-        exit(0);
-    }
-
-    
-    argInit( &cparam, 1.0, 0, 0, 0, 0 );
-*/
 
 	 ARParam  wparam;
 
@@ -313,23 +210,21 @@ static void draw( double trans1[3][4], double trans2[3][4], int mode )
     argConvGlpara(trans2, gl_para);
     glMultMatrixd( gl_para );
 
-    /* load the camera transformation matrix 
-    argConvGlpara(patt_trans, gl_para);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadMatrixd( gl_para );
-*/
-
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambi);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
-    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_flash);
-    glMaterialfv(GL_FRONT, GL_SHININESS, mat_flash_shiny);	
-    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
     glMatrixMode(GL_MODELVIEW);
 
-	drawHole(25,15.0,15.0);
+	/*glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glColorMask(0,0,0,0);
+	hole.render();
+	glCullFace(GL_FRONT);
+	glColorMask(1,1,1,1);*/
+	hole.render();
+	printf("%d\n",hole.tris.size());
 
     glDisable( GL_LIGHTING );
 
