@@ -24,10 +24,10 @@
 #ifdef _WIN32
 char			*vconf = "Data\\WDM_camera_flipV.xml";
 char            *cparam_name = "Data\\camera_para.dat";
-char                *config_name = "Data\\marker.dat";
+char            *config_name = "Data\\marker.dat";
 #else
 char			*vconf = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
-char           *cparam_name    = "Data/camera_para.dat";
+char            *cparam_name    = "Data/camera_para.dat";
 char            *config_name = "Data/marker.dat";
 #endif
 
@@ -223,8 +223,7 @@ static void mainLoop(void)
     glClear(GL_DEPTH_BUFFER_BIT);
 	
     for( i = 0; i < config->marker_num; i++ ) {
-        if( config->marker[i].visible >= 0 ) draw( config->trans, config->marker[i].trans, 0 );
-        else                                 draw( config->trans, config->marker[i].trans, 1 );
+       draw( config->trans, config->marker[i].trans, 0 );
     }
 
     argSwapBuffers();
@@ -330,7 +329,7 @@ static void draw( double trans1[3][4], double trans2[3][4], int mode )
     glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
     glMatrixMode(GL_MODELVIEW);
 
-	drawHole(50,25.0,25.0);
+	drawHole(25,15.0,15.0);
 
     glDisable( GL_LIGHTING );
 
