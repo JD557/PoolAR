@@ -1,3 +1,6 @@
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "model.hpp"
 #include "tiny_obj_loader.hpp"
 #include <GL/gl.h>

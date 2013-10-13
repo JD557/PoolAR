@@ -34,7 +34,7 @@ char            *config_name = "Data/marker.dat";
 
 int             xsize, ysize;
 int             thresh = 100;
-int             count = 0;
+int             icount = 0;
 
 ARParam         cparam;
 //char                *config_name = "Data/multi/marker.dat";
@@ -74,22 +74,22 @@ static void   keyEvent( unsigned char key, int x, int y)
 {
     /* quit if the ESC key is pressed */
     if( key == 0x1b ) {
-        printf("*** %f (frame/sec)\n", (double)count/arUtilTimer());
+        printf("*** %f (frame/sec)\n", (double)icount/arUtilTimer());
         cleanup();
         exit(0);
     }
 	/*
 	 if( key == 't' ) {
-        printf("*** %f (frame/sec)\n", (double)count/arUtilTimer());
+        printf("*** %f (frame/sec)\n", (double)icount/arUtilTimer());
         printf("Enter new threshold value (current = %d): ", thresh);
         scanf("%d",&thresh); while( getchar()!='\n' );
         printf("\n");
-        count = 0;
+        icount = 0;
     }
 	*/
     /* turn on and off the debug mode with right mouse */
     if( key == 'd' ) {
-        printf("*** %f (frame/sec)\n", (double)count/arUtilTimer());
+        printf("*** %f (frame/sec)\n", (double)icount/arUtilTimer());
         arDebug = 1 - arDebug;
         if( arDebug == 0 ) {
             glClearColor( 0.0, 0.0, 0.0, 0.0 );
@@ -98,7 +98,7 @@ static void   keyEvent( unsigned char key, int x, int y)
             glClear(GL_COLOR_BUFFER_BIT);
             argSwapBuffers();
         }
-        count = 0;
+        icount = 0;
     }
 }
 
@@ -117,8 +117,8 @@ static void mainLoop(void)
         arUtilSleep(2);
         return;
     }
-    if( count == 0 ) arUtilTimerReset();
-    count++;
+    if( icount == 0 ) arUtilTimerReset();
+    icount++;
 
     argDrawMode2D();
     argDispImage( dataPtr, 0,0 );
