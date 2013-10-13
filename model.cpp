@@ -38,50 +38,33 @@ Model::Model(string filename) {
 
 		addMaterial(shapes[i].material.name,tempMaterial);
 
-		int numVert = shapes[i].mesh.positions.size()/3;
+		std::vector<float> positions = shapes[i].mesh.positions;
+		std::vector<float> normals   = shapes[i].mesh.normals;
+		int numVert = positions.size()/3;
 		if (numVert==3) {
 			Tri t;
 			t.material=shapes[i].material.name;
-
-			t.normal[0]=Vec3d(0.0,0.0,1.0);
-			t.vertex[0].x=shapes[i].mesh.positions[0];
-			t.vertex[0].y=shapes[i].mesh.positions[1];
-			t.vertex[0].z=shapes[i].mesh.positions[2];
-
-			t.normal[1]=Vec3d(0.0,0.0,1.0);
-			t.vertex[1].x=shapes[i].mesh.positions[3];
-			t.vertex[1].y=shapes[i].mesh.positions[4];
-			t.vertex[1].z=shapes[i].mesh.positions[5];
-
-			t.normal[2]=Vec3d(0.0,0.0,1.0);
-			t.vertex[2].x=shapes[i].mesh.positions[6];
-			t.vertex[2].y=shapes[i].mesh.positions[7];
-			t.vertex[2].z=shapes[i].mesh.positions[8];
+			for (int j=0;j<numVert;++j) {
+				t.normal[j].x=normals[j*3+0];
+				t.normal[j].x=normals[j*3+1];
+				t.normal[j].x=normals[j*3+2];
+				t.vertex[j].x=positions[j*3+0];
+				t.vertex[j].y=positions[j*3+1];
+				t.vertex[j].z=positions[j*3+2];
+			}
 			tris.push_back(t);
 		}
 		else if (numVert==4) {
 			Quad q;
 			q.material=shapes[i].material.name;
-
-			q.normal[0]=Vec3d(0.0,0.0,1.0);
-			q.vertex[0].x=shapes[i].mesh.positions[0];
-			q.vertex[0].y=shapes[i].mesh.positions[1];
-			q.vertex[0].z=shapes[i].mesh.positions[2];
-
-			q.normal[1]=Vec3d(0.0,0.0,1.0);
-			q.vertex[1].x=shapes[i].mesh.positions[3];
-			q.vertex[1].y=shapes[i].mesh.positions[4];
-			q.vertex[1].z=shapes[i].mesh.positions[5];
-
-			q.normal[2]=Vec3d(0.0,0.0,1.0);
-			q.vertex[2].x=shapes[i].mesh.positions[6];
-			q.vertex[2].y=shapes[i].mesh.positions[7];
-			q.vertex[2].z=shapes[i].mesh.positions[8];
-
-			q.normal[3]=Vec3d(0.0,0.0,0.0);
-			q.vertex[3].x=shapes[i].mesh.positions[9];
-			q.vertex[3].y=shapes[i].mesh.positions[10];
-			q.vertex[3].z=shapes[i].mesh.positions[11];
+			for (int j=0;j<numVert;++j) {
+				q.normal[j].x=normals[j*3+0];
+				q.normal[j].x=normals[j*3+1];
+				q.normal[j].x=normals[j*3+2];
+				q.vertex[j].x=positions[j*3+0];
+				q.vertex[j].y=positions[j*3+1];
+				q.vertex[j].z=positions[j*3+2];
+			}
 			quads.push_back(q);
 		}
 		else {
@@ -89,11 +72,15 @@ Model::Model(string filename) {
 			p.material=shapes[i].material.name;
 
 			for (int j=0;j<numVert;++j) {
-				p.normal.push_back(Vec3d(0.0,0.0,1.0));
+				p.normal.push_back(Vec3d(
+					normals[3*j+0],
+					normals[3*j+1],
+					normals[3*j+2]
+				));
 				p.vertex.push_back(Vec3d(
-					shapes[i].mesh.positions[3*j],
-					shapes[i].mesh.positions[3*j+1],
-					shapes[i].mesh.positions[3*j+2]
+					positions[3*j+0],
+					positions[3*j+1],
+					positions[3*j+2]
 				));
 			}
 			polys.push_back(p);

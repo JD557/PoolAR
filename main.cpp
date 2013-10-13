@@ -60,7 +60,7 @@ Model hole;
 
 int main(int argc, char **argv)
 {
-	hole = Model("Assets/pool_table.obj");
+	hole = Model("Assets/pool.obj");
 	//hole = newHole(25,6.15,6.15);
 	glutInit(&argc, argv);
 	init();
