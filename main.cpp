@@ -54,14 +54,15 @@ static void   init(void);
 static void   cleanup(void);
 static void   keyEvent( unsigned char key, int x, int y);
 static void   mainLoop(void);
-static void   draw( double trans1[3][4], double trans2[3][4], int mode );
+static void   draw( double trans1[3][4], double trans2[3][4], size_t marker );
 
 Model hole;
+Model table;
 
 int main(int argc, char **argv)
 {
-	hole = Model("Assets/pool.obj");
-	//hole = newHole(25,6.15,6.15);
+	table = Model("Assets/pool.obj");
+	hole = newHole(25,6.15,6.15);
 	glutInit(&argc, argv);
 	init();
 
@@ -147,7 +148,7 @@ static void mainLoop(void)
     glClear(GL_DEPTH_BUFFER_BIT);
 	
     for( i = 0; i < config->marker_num; i++ ) {
-       draw( config->trans, config->marker[i].trans, 0 );
+       draw( config->trans, config->marker[i].trans, i );
     }
 
     argSwapBuffers();
@@ -195,7 +196,7 @@ static void cleanup(void)
     argCleanup();
 }
 
-static void draw( double trans1[3][4], double trans2[3][4], int mode )
+static void draw( double trans1[3][4], double trans2[3][4], size_t marker )
 {
     argDrawMode3D();
     argDraw3dCamera( 0, 0 );
@@ -217,13 +218,18 @@ static void draw( double trans1[3][4], double trans2[3][4], int mode )
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
     glMatrixMode(GL_MODELVIEW);
 
-	/*glEnable(GL_CULL_FACE);
+	
+	if (marker==0) {table.render();}
+
+	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glColorMask(0,0,0,0);
 	hole.render();
 	glCullFace(GL_FRONT);
-	glColorMask(1,1,1,1);*/
+	glColorMask(1,1,1,1);
 	hole.render();
+	glCullFace(GL_BACK);
+	glDisable(GL_CULL_FACE);
 
     glDisable( GL_LIGHTING );
 

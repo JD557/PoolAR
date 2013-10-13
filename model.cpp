@@ -40,53 +40,29 @@ Model::Model(string filename) {
 		tempMaterial.shininess[0]=shapes[i].material.shininess;
 
 		addMaterial(shapes[i].material.name,tempMaterial);
-
 		std::vector<float> positions = shapes[i].mesh.positions;
 		std::vector<float> normals   = shapes[i].mesh.normals;
-		int numVert = positions.size()/3;
-		if (numVert==3) {
+		std::vector<unsigned int> indices   = shapes[i].mesh.indices;
+		size_t numNorm = normals.size()/3;
+		size_t numFaces = indices.size()/3;
+		for (size_t j=0;j<numFaces;++j) {
 			Tri t;
 			t.material=shapes[i].material.name;
-			for (int j=0;j<numVert;++j) {
-				t.normal[j].x=normals[j*3+0];
-				t.normal[j].x=normals[j*3+1];
-				t.normal[j].x=normals[j*3+2];
-				t.vertex[j].x=positions[j*3+0];
-				t.vertex[j].y=positions[j*3+1];
-				t.vertex[j].z=positions[j*3+2];
+			for (size_t k=0;k<3;++k) {
+				size_t index = indices[j*3+k];
+				if (index<numNorm) {
+					t.normal[k].x=normals[index*3+0];
+					t.normal[k].y=normals[index*3+1];
+					t.normal[k].z=normals[index*3+2];
+				}
+				else {
+					t.normal[k]=Vec3d(0.0,0.0,1.0);
+				}
+				t.vertex[k].x=positions[index*3+0];
+				t.vertex[k].y=positions[index*3+1];
+				t.vertex[k].z=positions[index*3+2];
 			}
 			tris.push_back(t);
-		}
-		else if (numVert==4) {
-			Quad q;
-			q.material=shapes[i].material.name;
-			for (int j=0;j<numVert;++j) {
-				q.normal[j].x=normals[j*3+0];
-				q.normal[j].x=normals[j*3+1];
-				q.normal[j].x=normals[j*3+2];
-				q.vertex[j].x=positions[j*3+0];
-				q.vertex[j].y=positions[j*3+1];
-				q.vertex[j].z=positions[j*3+2];
-			}
-			quads.push_back(q);
-		}
-		else {
-			Poly p;
-			p.material=shapes[i].material.name;
-
-			for (int j=0;j<numVert;++j) {
-				p.normal.push_back(Vec3d(
-					normals[3*j+0],
-					normals[3*j+1],
-					normals[3*j+2]
-				));
-				p.vertex.push_back(Vec3d(
-					positions[3*j+0],
-					positions[3*j+1],
-					positions[3*j+2]
-				));
-			}
-			polys.push_back(p);
 		}
 	}
 }
