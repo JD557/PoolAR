@@ -134,7 +134,7 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 		else if (max==b) {hue=240+60.0/255.0*(r-g);}
 		if (hue<0) {hue+=360;}
 		dataOut[4*i+3]=0;
-		if ((max-min>minSat && (hue>300 || hue<60) && value>50)) {
+		if (sat>minSat && (hue>300 || hue<60) && value>50) {
 			int alpha=(sat-minSat)*255/maxSat;
 			if (alpha<0) {alpha=0;}
 			if (alpha>255) {alpha=255;}
@@ -142,6 +142,41 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 		}
 	}
 
+	int kernel[5][5];
+	kernel[0][0]=1;kernel[0][1]=4;kernel[0][2]=7;kernel[0][3]=4;kernel[0][4]=1;
+	kernel[1][0]=4;kernel[1][1]=16;kernel[1][2]=26;kernel[1][3]=16;kernel[1][4]=4;
+	kernel[2][0]=7;kernel[2][1]=26;kernel[2][2]=41;kernel[2][3]=26;kernel[2][4]=7;
+	kernel[3][0]=4;kernel[3][1]=16;kernel[3][2]=26;kernel[3][3]=16;kernel[3][4]=4;
+	kernel[4][0]=1;kernel[4][1]=4;kernel[4][2]=7;kernel[4][3]=4;kernel[4][4]=1;
+	int scale=273;
+
+	ARUint8 *smoothBuffer=(ARUint8*)malloc(h*w);
+	for (int y=0;y<h;++y) {
+		for (int x=0;x<w;++x) {			
+			size_t pos=640*y+x;
+			if (y<=1 || x<=1 || x>=w-2 || y>=h-2) {
+				smoothBuffer[pos]=dataOut[4*pos+3];
+			}
+			else {
+				unsigned int accum=0;
+				for (int i=0;i<5;++i) {
+					for (int j=0;j<5;++j) {
+						size_t newPos=640*(y+i-2)+x+j-2;
+						accum+=kernel[i][j]*dataOut[4*(newPos)+3];
+					}
+				}
+				smoothBuffer[pos]=accum/scale;
+			}
+		}
+	}
+	for (size_t y=0;y<h;++y) {
+		for (size_t x=0;x<w;++x) {			
+			size_t pos=640*y+x;
+			dataOut[4*pos+3]=smoothBuffer[pos];
+			//dataOut[4*pos+3]>100?255:dataOut[4*pos+3];
+		}
+	}
+	free(smoothBuffer);
 }
 
 /* main loop */
@@ -195,7 +230,7 @@ static void mainLoop(void)
 
     glDisable( GL_LIGHTING );
     glDisable( GL_DEPTH_TEST );
-	generateOverMask(dataPtr,dataPtr2,640,480,20,30);
+	generateOverMask(dataPtr,dataPtr2,640,480,15,30);
 	argDrawMode2D();
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_ALPHA);
@@ -204,7 +239,6 @@ static void mainLoop(void)
 	glBindTexture(GL_TEXTURE_2D,videoTexture);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
-	//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
 	glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, dataPtr2);
 	glEnable(GL_COLOR_MATERIAL);
