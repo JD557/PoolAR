@@ -3,13 +3,14 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef __APPLE__
-#include <GL/gl.h>
-#include <GL/glut.h>
+
+#ifdef _WIN32
+#include <GL/glew.h>
 #else
-#include <OpenGL/gl.h>
-#include <GLUT/glut.h>
+#include <GL/gl.h>
 #endif
+
+#include <GL/glut.h>
 #include <AR/gsub.h>
 #include <AR/video.h>
 #include <AR/param.h>
