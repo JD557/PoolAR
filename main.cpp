@@ -1,14 +1,11 @@
 #ifdef _WIN32
 #include <windows.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-
-#ifdef _WIN32
 #include <GL/glew.h>
 #else
 #include <GL/gl.h>
 #endif
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <GL/glut.h>
 #include <AR/gsub.h>
@@ -19,6 +16,15 @@
 #include <cmath>
 #include "model.hpp"
 
+#if AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGB
+	#define CHANNELS 3
+#elif AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGB
+	#define CHANNELS 3
+#elif AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGBA
+	#define CHANNELS 4
+#elif AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_BGRA
+	#define CHANNELS 4
+#endif
 
 //
 // Camera configuration.
@@ -28,7 +34,7 @@ char			*vconf = "Data\\WDM_camera_flipV.xml";
 char            *cparam_name = "Data\\camera_para.dat";
 char            *config_name = "Data\\marker.dat";
 #else
-char			*vconf = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+char			*vconf = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 char            *cparam_name    = "Data/camera_para.dat";
 char            *config_name = "Data/marker.dat";
 #endif
@@ -113,9 +119,9 @@ static void   keyEvent( unsigned char key, int x, int y)
 
 void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,int maxSat) {
 	for (size_t i=0;i<w*h;i++) {
-		ARUint8 r=dataIn[3*i];
-		ARUint8 g=dataIn[3*i+1];
-		ARUint8 b=dataIn[3*i+2];
+		ARUint8 r=dataIn[CHANNELS*i];
+		ARUint8 g=dataIn[CHANNELS*i+1];
+		ARUint8 b=dataIn[CHANNELS*i+2];
 		dataOut[4*i]=r;
 		dataOut[4*i+1]=g;
 		dataOut[4*i+2]=b;
