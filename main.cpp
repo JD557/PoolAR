@@ -18,12 +18,24 @@
 
 #if AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGB
 	#define CHANNELS 3
-#elif AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGB
+	#define CH1 r
+	#define CH2 g
+	#define CH3 b
+#elif AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_BGR
 	#define CHANNELS 3
+	#define CH1 b
+	#define CH2 g
+	#define CH3 r
 #elif AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGBA
 	#define CHANNELS 4
+	#define CH1 r
+	#define CH2 g
+	#define CH3 b
 #elif AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_BGRA
 	#define CHANNELS 4
+	#define CH1 b
+	#define CH2 g
+	#define CH3 r
 #endif
 
 //
@@ -124,9 +136,10 @@ void alphaErode(ARUint8 *data, int w, int h) {
 	kernel[2][0]=1;kernel[2][1]=1;kernel[2][2]=1;kernel[2][3]=1;kernel[2][4]=1;
 	kernel[3][0]=1;kernel[3][1]=1;kernel[3][2]=1;kernel[3][3]=1;kernel[3][4]=1;
 	kernel[4][0]=0;kernel[4][1]=1;kernel[4][2]=1;kernel[4][3]=1;kernel[4][4]=0;
-	int scale=273;
 
 	ARUint8 *erodedBuffer=(ARUint8*)malloc(h*w);
+	for(int i=0; i<h*w; ++i)  {erodedBuffer[i]=255;}
+
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
 			size_t pos=640*y+x;
@@ -161,9 +174,9 @@ void alphaDilate(ARUint8 *data, int w, int h) {
 	kernel[2][0]=1;kernel[2][1]=1;kernel[2][2]=1;kernel[2][3]=1;kernel[2][4]=1;
 	kernel[3][0]=1;kernel[3][1]=1;kernel[3][2]=1;kernel[3][3]=1;kernel[3][4]=1;
 	kernel[4][0]=0;kernel[4][1]=1;kernel[4][2]=1;kernel[4][3]=1;kernel[4][4]=0;
-	int scale=273;
 
 	ARUint8 *dilatedBuffer=(ARUint8*)malloc(h*w);
+	for(int i=0; i<h*w; ++i)  {dilatedBuffer[i]=0;}
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
 			size_t pos=640*y+x;
@@ -263,9 +276,9 @@ void alphaGaussianBlur(ARUint8 *data, int w, int h) {
 
 void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,int maxSat) {
 	for (size_t i=0;i<w*h;i++) {
-		ARUint8 r=dataIn[CHANNELS*i];
-		ARUint8 g=dataIn[CHANNELS*i+1];
-		ARUint8 b=dataIn[CHANNELS*i+2];
+		ARUint8 CH1=dataIn[CHANNELS*i];
+		ARUint8 CH2=dataIn[CHANNELS*i+1];
+		ARUint8 CH3=dataIn[CHANNELS*i+2];
 		dataOut[4*i]=r;
 		dataOut[4*i+1]=g;
 		dataOut[4*i+2]=b;
@@ -298,13 +311,22 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 	alphaDilate(dataOut,w,h);
 	alphaErode(dataOut,w,h);
 	alphaGaussianBlur(dataOut,w,h);
+	/* ALPHA DEBUG */
+	/*for (size_t i=0;i<w*h;i++) {
+		dataOut[4*i]=dataOut[4*i+3];
+		dataOut[4*i+1]=dataOut[4*i+3];
+		dataOut[4*i+2]=dataOut[4*i+3];
+	}*/
+
 }
+
+ARUint8 dataPtr2[640*480*4];
 
 /* main loop */
 static void mainLoop(void)
 {
     ARUint8         *dataPtr;
-	ARUint8         *dataPtr2=(ARUint8*)malloc(640*480*4);
+	//ARUint8         *dataPtr2=(ARUint8*)malloc(sizeof(ARUint8)*640*480*4);
     ARMarkerInfo    *marker_info;
     int             marker_num;
 	double          err;
@@ -351,6 +373,7 @@ static void mainLoop(void)
 
     glDisable( GL_LIGHTING );
     glDisable( GL_DEPTH_TEST );
+
 	generateOverMask(dataPtr,dataPtr2,640,480,15,30);
 	argDrawMode2D();
 	glEnable(GL_TEXTURE_2D);
@@ -376,7 +399,6 @@ static void mainLoop(void)
 	glDisable(GL_BLEND);
 
     argSwapBuffers();
-	free(dataPtr2);
 }
 
 static void init( void )
