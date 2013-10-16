@@ -34,7 +34,7 @@ char			*vconf = "Data\\WDM_camera_flipV.xml";
 char            *cparam_name = "Data\\camera_para.dat";
 char            *config_name = "Data\\marker.dat";
 #else
-char			*vconf = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+char			*vconf = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 char            *cparam_name    = "Data/camera_para.dat";
 char            *config_name = "Data/marker.dat";
 #endif
@@ -295,8 +295,8 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 
 	alphaGaussianBlur(dataOut,w,h);
 	alphaHisteresis(dataOut,w,h,125,150);
-	//alphaDilate(dataOut,w,h);
-	//alphaErode(dataOut,w,h);
+	alphaDilate(dataOut,w,h);
+	alphaErode(dataOut,w,h);
 	alphaGaussianBlur(dataOut,w,h);
 }
 
