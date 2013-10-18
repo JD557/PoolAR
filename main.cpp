@@ -90,8 +90,16 @@ float xy_aspect = (float)640 / (float)720;
 double cam_up_vec[] = { 0 , 1 , 0};
 int VIEW_MODE=0, NR_VIEW_MODE=2;
 
+
 double model_debug_camera[2][6]  = {0,0,192,-35,59,0,
 								   0,-127,93,-38,79,-2};
+
+double tx=model_debug_camera[VIEW_MODE][0],
+	   ty=model_debug_camera[VIEW_MODE][1],
+	   tz=model_debug_camera[VIEW_MODE][2],
+	   mx=model_debug_camera[VIEW_MODE][3],
+	   my=model_debug_camera[VIEW_MODE][4],
+	   mz=model_debug_camera[VIEW_MODE][5];
 
 int main(int argc, char **argv)
 {
@@ -148,46 +156,53 @@ static void   keyEvent( unsigned char key, int x, int y)
 	if( key == '\\' ) {
         if(++VIEW_MODE==NR_VIEW_MODE)
 			VIEW_MODE=0;
+
+	   tx=model_debug_camera[VIEW_MODE][0];
+	   ty=model_debug_camera[VIEW_MODE][1];
+	   tz=model_debug_camera[VIEW_MODE][2];
+	   mx=model_debug_camera[VIEW_MODE][3];
+	   my=model_debug_camera[VIEW_MODE][4];
+	   mz=model_debug_camera[VIEW_MODE][5];
     }
-	/*
+	
 	if( key == 'q' ) {
-        printf("x: %f\n", ++view_x);
+        printf("x: %f\n", ++tx);
     }
 	if( key == 'w' ) {
-        printf("x: %f\n", ++view_y);
+        printf("x: %f\n", ++ty);
     }
 	if( key == 'e' ) {
-        printf("x: %f\n", ++view_z);
+        printf("x: %f\n", ++tz);
     }
 	if( key == 'z' ) {
-        printf("x: %f\n", --view_x);
+        printf("x: %f\n", --tx);
     }
 	if( key == 'x' ) {
-        printf("y: %f\n", --view_y);
+        printf("y: %f\n", --ty);
     }
 	if( key == 'c' ) {
-        printf("z: %f\n", --view_z);
+        printf("z: %f\n", --tz);
     }
 
 	if( key == 'r' ) {
-        printf("xxx: %f\n", ++xxx);
+        printf("xxx: %f\n", ++mx);
     }
 	if( key == 't' ) {
-        printf("yyy: %f\n", ++yyy);
+        printf("yyy: %f\n", ++my);
     }
 	if( key == 'y' ) {
-        printf("zzz: %f\n", ++zzz);
+        printf("zzz: %f\n", ++mz);
     }
 	if( key == 'v' ) {
-        printf("xxx: %f\n", --xxx);
+        printf("xxx: %f\n", --mx);
     }
 	if( key == 'b' ) {
-        printf("yyy: %f\n", --yyy);
+        printf("yyy: %f\n", --my);
     }
 	if( key == 'n' ) {
-        printf("zzz: %f\n", --zzz);
+        printf("zzz: %f\n", --mz);
     }
-	*/
+	
 }
 
 void alphaErode(ARUint8 *data, int w, int h) {
@@ -469,7 +484,7 @@ static void mainLoop(void)
 		glMatrixMode( GL_PROJECTION );
 		glLoadIdentity();	
 		glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 500.0 );
-		gluLookAt(model_debug_camera[VIEW_MODE][0],model_debug_camera[VIEW_MODE][1],model_debug_camera[VIEW_MODE][2],0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
+		gluLookAt(tx,ty,tz,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
 		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 		draw_table_always();
 		glutSwapBuffers();
@@ -550,26 +565,30 @@ static void drawObject( double trans1[3][4], double trans2[3][4], size_t marker 
 
 }
 
+GLfloat ambi2[]   = {0.5, 0.5, 0.5, 0.5};
 static void draw_table_always(){
 
 	
 	glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, ambi);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambi2);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
     //glMatrixMode(GL_MODELVIEW);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	
 	glClearColor(0,1,0,1);
-     glClear(GL_COLOR_BUFFER_BIT);
-     glClear(GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT);
 
-	glTranslated(model_debug_camera[VIEW_MODE][3],model_debug_camera[VIEW_MODE][4],model_debug_camera[VIEW_MODE][5]);
-	
 	table.render();
+	glTranslated(mx,my,mz);
+	table.render();
+	
 	//glColor3d(255,0,0);
+	//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	//glScaled(3,3,3);
 	ball.render();
 	//hole.render();
 }
