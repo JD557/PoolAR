@@ -82,6 +82,14 @@ Model hole;
 Model table;
 GLuint videoTexture;
 
+//mode debug
+float xy_aspect = (float)640 / (float)720;
+double cam_up_vec[] = { 0 , 1 , 0};
+int VIEW_MODE=0, NR_VIEW_MODE=2;
+
+double model_debug_camera[2][6]  = {0,0,192,-35,59,0,
+								   0,-127,93,-38,79,-2};
+
 int main(int argc, char **argv)
 {
 
@@ -100,10 +108,7 @@ int main(int argc, char **argv)
 	return (0);
 }
 
-float xy_aspect = (float)640 / (float)720;
-double view_x=0, view_y=0, view_z=192;
-double xxx=-35,yyy=59,zzz=0;
-double cam_up_vec[] = { 0 , 1 , 0};
+
 
 static void   keyEvent( unsigned char key, int x, int y)
 {
@@ -135,6 +140,50 @@ static void   keyEvent( unsigned char key, int x, int y)
         }
         icount = 0;
     }
+
+	if( key == '\\' ) {
+        if(++VIEW_MODE==NR_VIEW_MODE)
+			VIEW_MODE=0;
+    }
+	/*
+	if( key == 'q' ) {
+        printf("x: %f\n", ++view_x);
+    }
+	if( key == 'w' ) {
+        printf("x: %f\n", ++view_y);
+    }
+	if( key == 'e' ) {
+        printf("x: %f\n", ++view_z);
+    }
+	if( key == 'z' ) {
+        printf("x: %f\n", --view_x);
+    }
+	if( key == 'x' ) {
+        printf("y: %f\n", --view_y);
+    }
+	if( key == 'c' ) {
+        printf("z: %f\n", --view_z);
+    }
+
+	if( key == 'r' ) {
+        printf("xxx: %f\n", ++xxx);
+    }
+	if( key == 't' ) {
+        printf("yyy: %f\n", ++yyy);
+    }
+	if( key == 'y' ) {
+        printf("zzz: %f\n", ++zzz);
+    }
+	if( key == 'v' ) {
+        printf("xxx: %f\n", --xxx);
+    }
+	if( key == 'b' ) {
+        printf("yyy: %f\n", --yyy);
+    }
+	if( key == 'n' ) {
+        printf("zzz: %f\n", --zzz);
+    }
+	*/
 }
 
 void alphaErode(ARUint8 *data, int w, int h) {
@@ -415,8 +464,8 @@ static void mainLoop(void)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glMatrixMode( GL_PROJECTION );
 		glLoadIdentity();	
-		glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 200.0 );
-		gluLookAt(view_x,view_y,view_z,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
+		glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 500.0 );
+		gluLookAt(model_debug_camera[VIEW_MODE][0],model_debug_camera[VIEW_MODE][1],model_debug_camera[VIEW_MODE][2],0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
 		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 		draw_table_always();
 		glutSwapBuffers();
@@ -510,6 +559,6 @@ static void draw_table_always(){
 	glCullFace(GL_BACK);
 	
 
-	glTranslated(xxx,yyy,zzz);
+	glTranslated(model_debug_camera[VIEW_MODE][3],model_debug_camera[VIEW_MODE][4],model_debug_camera[VIEW_MODE][5]);
 	table.render();
 }
