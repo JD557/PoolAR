@@ -16,6 +16,8 @@
 #include <cmath>
 #include "model.hpp"
 
+#include "bullet\include\btBulletCollisionCommon.h"
+
 #if AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGB
 	#define CHANNELS 3
 	#define CH1 r
