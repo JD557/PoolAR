@@ -38,6 +38,8 @@
 	#define CH3 r
 #endif
 
+#define MODEL_DEBUG true
+
 //
 // Camera configuration.
 //
@@ -74,6 +76,7 @@ static void   cleanup(void);
 static void   keyEvent( unsigned char key, int x, int y);
 static void   mainLoop(void);
 static void   drawObject( double trans1[3][4], double trans2[3][4], size_t marker );
+static void   draw_table_always();
 
 Model hole;
 Model table;
@@ -96,6 +99,11 @@ int main(int argc, char **argv)
     argMainLoop( NULL, keyEvent, mainLoop );
 	return (0);
 }
+
+float xy_aspect = (float)640 / (float)720;
+double view_x=0, view_y=0, view_z=192;
+double xxx=-35,yyy=59,zzz=0;
+double cam_up_vec[] = { 0 , 1 , 0};
 
 static void   keyEvent( unsigned char key, int x, int y)
 {
@@ -322,83 +330,98 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 
 ARUint8 dataPtr2[640*480*4];
 
+
+
 /* main loop */
 static void mainLoop(void)
 {
-    ARUint8         *dataPtr;
-	//ARUint8         *dataPtr2=(ARUint8*)malloc(sizeof(ARUint8)*640*480*4);
-    ARMarkerInfo    *marker_info;
-    int             marker_num;
-	double          err;
+	if( !MODEL_DEBUG ){
+		ARUint8         *dataPtr;
+		//ARUint8         *dataPtr2=(ARUint8*)malloc(sizeof(ARUint8)*640*480*4);
+		ARMarkerInfo    *marker_info;
+		int             marker_num;
+		double          err;
 
-    /* grab a video frame */
-    if( (dataPtr = (ARUint8 *)arVideoGetImage()) == NULL ) {
-        arUtilSleep(2);
-        return;
-    }
-    if( icount == 0 ) arUtilTimerReset();
-    icount++;
+   
+		if( (dataPtr = (ARUint8 *)arVideoGetImage()) == NULL ) {
+			arUtilSleep(2);
+			return;
+		}
+		if( icount == 0 ) arUtilTimerReset();
+		icount++;
 
-    argDrawMode2D();
-    argDispImage( dataPtr, 0,0 );
+		argDrawMode2D();
+		argDispImage( dataPtr, 0,0 );
 
-    /* detect the markers in the video frame */
-    if( arDetectMarker(dataPtr, thresh, &marker_info, &marker_num) < 0 ) {
-        cleanup();
-        exit(0);
-    }
-	//printf("num = %d\n", marker_num);
-    arVideoCapNext();
-
-	if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
-		argSwapBuffers();
-        return;
-    }
-    //printf("err = %f\n", err);
-    if(err > 100.0 ) {
-        argSwapBuffers();
-        return;
-    }
-
-    argDrawMode3D();
-    argDraw3dCamera( 0, 0 );
-    glClearDepth( 1.0 );
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
+    
+		if( arDetectMarker(dataPtr, thresh, &marker_info, &marker_num) < 0 ) {
+			cleanup();
+			exit(0);
+		}
 	
-    for(int i = 0; i < config->marker_num; i++ ) {
-       drawObject( config->trans, config->marker[i].trans, i );
-    }
+		arVideoCapNext();
 
-    glDisable( GL_LIGHTING );
-    glDisable( GL_DEPTH_TEST );
+		if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
+			argSwapBuffers();
+			return;
+		}
+    
+		if(err > 100.0 ) {
+			argSwapBuffers();
+			return;
+		}
+	
+		argDrawMode3D();
+		argDraw3dCamera( 0, 0 );
+		glClearDepth( 1.0 );
+		glClear(GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+	
+		for(int i = 0; i < config->marker_num; i++ ) {
+		   drawObject( config->trans, config->marker[i].trans, i );
+		}
 
-	generateOverMask(dataPtr,dataPtr2,640,480,15,30);
-	argDrawMode2D();
-	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_ALPHA);
-	glEnable(GL_BLEND);
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glBindTexture(GL_TEXTURE_2D,videoTexture);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
-	glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, dataPtr2);
-	glEnable(GL_COLOR_MATERIAL);
-	int deltaY=240;
-	glBegin(GL_QUADS);
-		glTexCoord2d(0,1); glVertex2f(0, 0+deltaY);
-		glTexCoord2d(1,1); glVertex2f(640, 0+deltaY);
-		glTexCoord2d(1,0); glVertex2f(640, 480+deltaY);
-		glTexCoord2d(0,0); glVertex2f(0, 480+deltaY);
-	glEnd();
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_COLOR_MATERIAL);
-	glDisable(GL_ALPHA);
-	glDisable(GL_BLEND);
+		glDisable( GL_LIGHTING );
+		glDisable( GL_DEPTH_TEST );
 
-    argSwapBuffers();
+		generateOverMask(dataPtr,dataPtr2,640,480,15,30);
+		argDrawMode2D();
+		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_ALPHA);
+		glEnable(GL_BLEND);
+		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBindTexture(GL_TEXTURE_2D,videoTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, dataPtr2);
+		glEnable(GL_COLOR_MATERIAL);
+		int deltaY=240;
+		glBegin(GL_QUADS);
+			glTexCoord2d(0,1); glVertex2f(0, 0+deltaY);
+			glTexCoord2d(1,1); glVertex2f(640, 0+deltaY);
+			glTexCoord2d(1,0); glVertex2f(640, 480+deltaY);
+			glTexCoord2d(0,0); glVertex2f(0, 480+deltaY);
+		glEnd();
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_COLOR_MATERIAL);
+		glDisable(GL_ALPHA);
+		glDisable(GL_BLEND);
+	
+		argSwapBuffers();
+	} else {
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glMatrixMode( GL_PROJECTION );
+		glLoadIdentity();	
+		glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 200.0 );
+		gluLookAt(view_x,view_y,view_z,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
+		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+		draw_table_always();
+		glutSwapBuffers();
+		glFlush();
+	}
 }
 
 static void init( void )
@@ -472,4 +495,21 @@ static void drawObject( double trans1[3][4], double trans2[3][4], size_t marker 
 	glCullFace(GL_BACK);
 	glDisable(GL_CULL_FACE);
 
+}
+
+static void draw_table_always(){
+
+	
+	glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambi);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
+    //glMatrixMode(GL_MODELVIEW);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	
+
+	glTranslated(xxx,yyy,zzz);
+	table.render();
 }
