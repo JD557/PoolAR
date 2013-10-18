@@ -47,6 +47,21 @@ struct Material {
 	float transmittance[4];
 	float emission[4];
 	float shininess[1];
+	Material() {
+		ambient[0]  = 0.7;
+		ambient[1]  = 0.7;
+		ambient[2]  = 0.7;
+		ambient[3]  = 1.0;
+		diffuse[0]  = 0.9;
+		diffuse[1]  = 0.9;
+		diffuse[2]  = 0.9;
+		diffuse[3]  = 1.0;
+		specular[0]  = 0.3;
+		specular[1]  = 0.3;
+		specular[2]  = 0.3;
+		specular[3]  = 1.0;
+		shininess[0] = 0.5;
+	}
 };
 
 class Model {
