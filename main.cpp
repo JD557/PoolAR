@@ -82,6 +82,7 @@ static void   draw_table_always();
 
 Model hole;
 Model table;
+Model ball;
 GLuint videoTexture;
 
 //mode debug
@@ -99,6 +100,7 @@ int main(int argc, char **argv)
 	init();
 
 	table = Model("Assets/pool.obj");
+	ball = Model("Assets/ball.obj");
 	hole = newHole(25,6.15,6.15);
 	glEnable(GL_TEXTURE_2D);
 	glGenTextures(1, &videoTexture);
@@ -560,7 +562,14 @@ static void draw_table_always(){
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	
+	glClearColor(0,1,0,1);
+     glClear(GL_COLOR_BUFFER_BIT);
+     glClear(GL_DEPTH_BUFFER_BIT);
 
 	glTranslated(model_debug_camera[VIEW_MODE][3],model_debug_camera[VIEW_MODE][4],model_debug_camera[VIEW_MODE][5]);
+	
 	table.render();
+	//glColor3d(255,0,0);
+	ball.render();
+	//hole.render();
 }
