@@ -108,7 +108,6 @@ int main(int argc, char **argv)
 	glutInit(&argc, argv);
 	init();
 
-	world = Physics();
 	for (int i=0 ; i<300 ; i++) {
                 world.dynamicsWorld->stepSimulation(1/15.f,10);
 
