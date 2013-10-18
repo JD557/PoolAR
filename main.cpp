@@ -6,6 +6,7 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 
 #include <GL/glut.h>
 #include <AR/gsub.h>
@@ -15,8 +16,7 @@
 #include <AR/arMulti.h>
 #include <cmath>
 #include "model.hpp"
-
-#include "bullet/include/btBulletCollisionCommon.h"
+#include "physics.hpp"
 
 #if AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGB
 	#define CHANNELS 3
@@ -84,6 +84,7 @@ Model hole;
 Model table;
 Model ball;
 GLuint videoTexture;
+Physics world;
 
 //mode debug
 float xy_aspect = (float)640 / (float)720;
@@ -106,6 +107,16 @@ int main(int argc, char **argv)
 
 	glutInit(&argc, argv);
 	init();
+
+	world = Physics();
+	for (int i=0 ; i<300 ; i++) {
+                world.dynamicsWorld->stepSimulation(1/15.f,10);
+
+                btTransform trans;
+                world.fallRigidBody->getMotionState()->getWorldTransform(trans);
+
+                std::cout << "sphere height: " << trans.getOrigin().getY() << std::endl;
+       }
 
 	table = Model("Assets/pool.obj");
 	ball = Model("Assets/ball.obj");
@@ -583,7 +594,7 @@ static void draw_table_always(){
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-	table.render();
+	
 	glTranslated(mx,my,mz);
 	table.render();
 	
