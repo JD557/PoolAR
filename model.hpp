@@ -11,6 +11,7 @@
 #endif
 #include <vector>
 #include <string>
+#include "devil_cpp_wrapper.hpp"
 using namespace std;
 
 struct Vec3d {
@@ -25,18 +26,21 @@ struct Vec3d {
 struct Tri {
 	Vec3d vertex[3];
 	Vec3d normal[3];
+	Vec3d uvw[3];
 	string material;
 };
 
 struct Quad {
 	Vec3d vertex[4];
 	Vec3d normal[4];
+	Vec3d uvw[4];
 	string material;
 };
 
 struct Poly {
 	vector<Vec3d> vertex;
 	vector<Vec3d> normal;
+	vector<Vec3d> uvw;
 	string material;
 };
 
@@ -62,6 +66,8 @@ struct Material {
 		specular[3]  = 1.0;
 		shininess[0] = 0.5;
 	}
+	bool hasTexture = false;
+	ilImage texture;
 };
 
 class Model {

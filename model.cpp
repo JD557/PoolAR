@@ -32,6 +32,18 @@ Model::Model(string filename) {
 			tempMaterial.emission[j]=shapes[i].material.emission[j];
 			tempMaterial.transmittance[j]=shapes[i].material.transmittance[j];
 		}
+		if (shapes[i].material.diffuse_texname.size()>0) {
+			glEnable(GL_TEXTURE_2D);
+			tempMaterial.texture.Load(shapes[i].material.diffuse_texname.c_str());
+			tempMaterial.hasTexture=true;
+			glBindTexture(GL_TEXTURE_2D, tempMaterial.texture.GetId());
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
+			std::cout << "" << std::endl;
+			glTexImage2D(GL_TEXTURE_2D, 0, tempMaterial.texture.Bpp(), tempMaterial.texture.Width(), tempMaterial.texture.Height(), 0, tempMaterial.texture.Format(), GL_UNSIGNED_BYTE, tempMaterial.texture.GetData());
+			glDisable(GL_TEXTURE_2D);
+
+		}
 		tempMaterial.ambient[3]=1.0f;
 		tempMaterial.diffuse[3]=1.0f;
 		tempMaterial.specular[3]=1.0f;
@@ -42,6 +54,7 @@ Model::Model(string filename) {
 		addMaterial(shapes[i].material.name,tempMaterial);
 		std::vector<float> positions = shapes[i].mesh.positions;
 		std::vector<float> normals   = shapes[i].mesh.normals;
+		std::vector<float> uvs       = shapes[i].mesh.texcoords;
 		std::vector<unsigned int> indices   = shapes[i].mesh.indices;
 		size_t numNorm = normals.size()/3;
 		size_t numFaces = indices.size()/3;
@@ -75,6 +88,13 @@ void Model::applyMaterial(string name) {
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat.diffuse);
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat.specular);
     glMaterialfv(GL_FRONT, GL_SHININESS, mat.shininess);
+    if (mat.hasTexture) {
+    	glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, mat.texture.GetId());
+    }
+    else {
+    	glDisable(GL_TEXTURE_2D);
+    }
 }
 
 void Model::render() {
@@ -84,6 +104,7 @@ void Model::render() {
 	for (int i=0;i<tris.size();++i) {
 		applyMaterial(tris[i].material);
 		for (int j=0;j<3;++j) {
+			glTexCoord2f(tris[i].uvw[j].x,tris[i].uvw[j].y);
 			glNormal3f(tris[i].normal[j].x,tris[i].normal[j].y,tris[i].normal[j].z);
 			glVertex3f(tris[i].vertex[j].x,tris[i].vertex[j].y,tris[i].vertex[j].z);
 		}
@@ -95,6 +116,7 @@ void Model::render() {
 	for (int i=0;i<quads.size();++i) {
 		applyMaterial(quads[i].material);
 		for (int j=0;j<4;++j) {
+			glTexCoord2f(tris[i].uvw[j].x,tris[i].uvw[j].y);
 			glNormal3f(quads[i].normal[j].x,quads[i].normal[j].y,quads[i].normal[j].z);
 			glVertex3f(quads[i].vertex[j].x,quads[i].vertex[j].y,quads[i].vertex[j].z);
 		}
@@ -106,6 +128,7 @@ void Model::render() {
 		applyMaterial(polys[i].material);
 		glBegin(GL_POLYGON);
 		for (int j=0;j<polys[i].vertex.size();++j) {
+			glTexCoord2f(tris[i].uvw[j].x,tris[i].uvw[j].y);
 			glNormal3f(polys[i].normal[j].x,polys[i].normal[j].y,polys[i].normal[j].z);
 			glVertex3f(polys[i].vertex[j].x,polys[i].vertex[j].y,polys[i].vertex[j].z);
 		}
