@@ -17,6 +17,7 @@
 #include <cmath>
 #include "model.hpp"
 #include "physics.hpp"
+#include "imgproc.hpp"
 
 #if AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGB
 	#define CHANNELS 3
@@ -46,13 +47,13 @@
 // Camera configuration.
 //
 #ifdef _WIN32
-char			*vconf = "Data\\WDM_camera_flipV.xml";
-char            *cparam_name = "Data\\camera_para.dat";
-char            *config_name = "Data\\marker.dat";
+string vconf = "Data\\WDM_camera_flipV.xml";
+string cparam_name = "Data\\camera_para.dat";
+string config_name = "Data\\marker.dat";
 #else
-char			*vconf = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
-char            *cparam_name    = "Data/camera_para.dat";
-char            *config_name = "Data/marker.dat";
+string vconf = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+string cparam_name    = "Data/camera_para.dat";
+string config_name = "Data/marker.dat";
 #endif
 
 int             xsize, ysize;
@@ -92,8 +93,8 @@ double cam_up_vec[] = { 0 , 1 , 0};
 int VIEW_MODE=0, NR_VIEW_MODE=2;
 
 
-double model_debug_camera[2][6]  = {0,0,192,-35,59,0,
-								   0,-127,93,-38,79,-2};
+double model_debug_camera[2][6]  = {{0,0,192,-35,59,0},
+								   {0,-127,93,-38,79,-2}};
 
 double tx=model_debug_camera[VIEW_MODE][0],
 	   ty=model_debug_camera[VIEW_MODE][1],
@@ -114,7 +115,7 @@ int main(int argc, char **argv)
                 btTransform trans;
                 world.fallRigidBody->getMotionState()->getWorldTransform(trans);
 
-                std::cout << "sphere height: " << trans.getOrigin().getY() << std::endl;
+                //std::cout << "sphere height: " << trans.getOrigin().getY() << std::endl;
        }
 
 	table = Model("Assets/pool.obj");
@@ -215,153 +216,8 @@ static void   keyEvent( unsigned char key, int x, int y)
 	
 }
 
-void alphaErode(ARUint8 *data, int w, int h) {
-	int kernel[5][5];
-	kernel[0][0]=0;kernel[0][1]=1;kernel[0][2]=1;kernel[0][3]=1;kernel[0][4]=0;
-	kernel[1][0]=1;kernel[1][1]=1;kernel[1][2]=1;kernel[1][3]=1;kernel[1][4]=1;
-	kernel[2][0]=1;kernel[2][1]=1;kernel[2][2]=1;kernel[2][3]=1;kernel[2][4]=1;
-	kernel[3][0]=1;kernel[3][1]=1;kernel[3][2]=1;kernel[3][3]=1;kernel[3][4]=1;
-	kernel[4][0]=0;kernel[4][1]=1;kernel[4][2]=1;kernel[4][3]=1;kernel[4][4]=0;
-
-	ARUint8 *erodedBuffer=(ARUint8*)malloc(h*w);
-	for(int i=0; i<h*w; ++i)  {erodedBuffer[i]=255;}
-
-	for (int y=0;y<h;++y) {
-		for (int x=0;x<w;++x) {			
-			size_t pos=640*y+x;
-			if (y<=1 || x<=1 || x>=w-2 || y>=h-2) {
-				erodedBuffer[pos]=data[4*pos+3];
-			}
-			else if (data[4*pos+3]==0) {
-				for (int i=0;i<5;++i) {
-					for (int j=0;j<5;++j) {
-						size_t newPos=640*(y+i-2)+x+j-2;
-						if (kernel[i][j]==1) {
-							erodedBuffer[newPos]=0;
-						}
-					}
-				}
-			}
-		}
-	}
-	for (size_t y=0;y<h;++y) {
-		for (size_t x=0;x<w;++x) {			
-			size_t pos=640*y+x;
-			data[4*pos+3]=erodedBuffer[pos];
-		}
-	}
-	free(erodedBuffer);
-}
-
-void alphaDilate(ARUint8 *data, int w, int h) {
-	int kernel[5][5];
-	kernel[0][0]=0;kernel[0][1]=1;kernel[0][2]=1;kernel[0][3]=1;kernel[0][4]=0;
-	kernel[1][0]=1;kernel[1][1]=1;kernel[1][2]=1;kernel[1][3]=1;kernel[1][4]=1;
-	kernel[2][0]=1;kernel[2][1]=1;kernel[2][2]=1;kernel[2][3]=1;kernel[2][4]=1;
-	kernel[3][0]=1;kernel[3][1]=1;kernel[3][2]=1;kernel[3][3]=1;kernel[3][4]=1;
-	kernel[4][0]=0;kernel[4][1]=1;kernel[4][2]=1;kernel[4][3]=1;kernel[4][4]=0;
-
-	ARUint8 *dilatedBuffer=(ARUint8*)malloc(h*w);
-	for(int i=0; i<h*w; ++i)  {dilatedBuffer[i]=0;}
-	for (int y=0;y<h;++y) {
-		for (int x=0;x<w;++x) {			
-			size_t pos=640*y+x;
-			if (y<=1 || x<=1 || x>=w-2 || y>=h-2) {
-				dilatedBuffer[pos]=data[4*pos+3];
-			}
-			else if (data[4*pos+3]==255) {
-				for (int i=0;i<5;++i) {
-					for (int j=0;j<5;++j) {
-						size_t newPos=640*(y+i-2)+x+j-2;
-						if (kernel[i][j]==1) {
-							dilatedBuffer[newPos]=255;
-						}
-					}
-				}
-			}
-		}
-	}
-	for (size_t y=0;y<h;++y) {
-		for (size_t x=0;x<w;++x) {			
-			size_t pos=640*y+x;
-			data[4*pos+3]=dilatedBuffer[pos];
-		}
-	}
-	free(dilatedBuffer);
-}
-
-void alphaHisteresis(ARUint8 *data, int w, int h,int lowThres, int highThres) {
-	// First Pass
-	for (int y=0;y<h;++y) {
-		for (int x=0;x<w;++x) {			
-			if (data[4*(w*y+x)+3]>=highThres) {
-				data[4*(w*y+x)+3]=255;
-				if (x!=w-1 && data[4*(w*y+x+1)+3]>=lowThres) {data[4*(w*y+x+1)+3]=255;}
-				if (y!=h-1 && data[4*(w*(y+1)+x)+3]>=lowThres) {data[4*(w*(y+1)+x)+3]=255;}
-				if (x!=w-1 && y!=h-1 && data[4*(w*(y+1)+x+1)+3]>=lowThres) {data[4*(w*(y+1)+x+1)+3]=255;}
-			}
-		}
-	}
-	// Second Pass
-	for (int y=h-1;y>=0;--y) {
-		for (int x=w-1;x>=0;--x) {			
-			if (data[4*(w*y+x)+3]>=highThres) {
-				data[4*(w*y+x)+3]=255;
-				if (x!=0 && data[4*(w*y+x-1)+3]>=lowThres) {data[4*(w*y+x-1)+3]=255;}
-				if (y!=0 && data[4*(w*(y-1)+x)+3]>=lowThres) {data[4*(w*(y-1)+x)+3]=255;}
-				if (x!=0 && y!=0 && data[4*(w*(y-1)+x-1)+3]>=lowThres) {data[4*(w*(y-1)+x-1)+3]=255;}
-			}
-		}
-	}
-	// Cleanup
-	for (int y=0;y<h;++y) {
-		for (int x=0;x<w;++x) {			
-			if (data[4*(w*y+x)+3]!=255) {
-				data[4*(w*y+x)+3]=0;
-			}
-		}
-	}
-}
-
-void alphaGaussianBlur(ARUint8 *data, int w, int h) {
-	int kernel[5][5];
-	kernel[0][0]=1;kernel[0][1]=4;kernel[0][2]=7;kernel[0][3]=4;kernel[0][4]=1;
-	kernel[1][0]=4;kernel[1][1]=16;kernel[1][2]=26;kernel[1][3]=16;kernel[1][4]=4;
-	kernel[2][0]=7;kernel[2][1]=26;kernel[2][2]=41;kernel[2][3]=26;kernel[2][4]=7;
-	kernel[3][0]=4;kernel[3][1]=16;kernel[3][2]=26;kernel[3][3]=16;kernel[3][4]=4;
-	kernel[4][0]=1;kernel[4][1]=4;kernel[4][2]=7;kernel[4][3]=4;kernel[4][4]=1;
-	int scale=273;
-
-	ARUint8 *smoothBuffer=(ARUint8*)malloc(h*w);
-	for (int y=0;y<h;++y) {
-		for (int x=0;x<w;++x) {			
-			size_t pos=640*y+x;
-			if (y<=1 || x<=1 || x>=w-2 || y>=h-2) {
-				smoothBuffer[pos]=data[4*pos+3];
-			}
-			else {
-				unsigned int accum=0;
-				for (int i=0;i<5;++i) {
-					for (int j=0;j<5;++j) {
-						size_t newPos=640*(y+i-2)+x+j-2;
-						accum+=kernel[i][j]*data[4*(newPos)+3];
-					}
-				}
-				smoothBuffer[pos]=accum/scale;
-			}
-		}
-	}
-	for (size_t y=0;y<h;++y) {
-		for (size_t x=0;x<w;++x) {			
-			size_t pos=640*y+x;
-			data[4*pos+3]=smoothBuffer[pos];
-		}
-	}
-	free(smoothBuffer);
-}
-
 void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,int maxSat) {
-	for (size_t i=0;i<w*h;i++) {
+	for (int i=0;i<w*h;i++) {
 		ARUint8 CH1=dataIn[CHANNELS*i];
 		ARUint8 CH2=dataIn[CHANNELS*i+1];
 		ARUint8 CH3=dataIn[CHANNELS*i+2];
@@ -376,7 +232,7 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 		if (r<min) {min=r;}
 		if (g<min) {min=g;}
 		if (b<min) {min=b;}
-		int hue;
+		int hue=0;
 		int sat=max-min;
 		int value=max;
 		if (max==r) {hue=60.0/255.0*(g-b);}
@@ -415,7 +271,6 @@ static void mainLoop(void)
 {
 	if( !MODEL_DEBUG ){
 		ARUint8         *dataPtr;
-		//ARUint8         *dataPtr2=(ARUint8*)malloc(sizeof(ARUint8)*640*480*4);
 		ARMarkerInfo    *marker_info;
 		int             marker_num;
 		double          err;
@@ -431,19 +286,16 @@ static void mainLoop(void)
 		argDrawMode2D();
 		argDispImage( dataPtr, 0,0 );
 
-    
 		if( arDetectMarker(dataPtr, thresh, &marker_info, &marker_num) < 0 ) {
 			cleanup();
 			exit(0);
 		}
-	
 		arVideoCapNext();
 
 		if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
 			argSwapBuffers();
 			return;
 		}
-    
 		if(err > 100.0 ) {
 			argSwapBuffers();
 			return;
@@ -509,13 +361,13 @@ static void init( void )
 	 ARParam  wparam;
 
     /* open the video path */
-    if( arVideoOpen( vconf ) < 0 ) exit(0);
+    if( arVideoOpen( &vconf[0] ) < 0 ) exit(0);
     /* find the size of the window */
     if( arVideoInqSize(&xsize, &ysize) < 0 ) exit(0);
     printf("Image size (x,y) = (%d,%d)\n", xsize, ysize);
 
     /* set the initial camera parameters */
-    if( arParamLoad(cparam_name, 1, &wparam) < 0 ) {
+    if( arParamLoad(cparam_name.c_str(), 1, &wparam) < 0 ) {
         printf("Camera parameter load error !!\n");
         exit(0);
     }
@@ -524,7 +376,7 @@ static void init( void )
     printf("*** Camera Parameter ***\n");
     arParamDisp( &cparam );
 
-    if( (config = arMultiReadConfigFile(config_name)) == NULL ) {
+    if( (config = arMultiReadConfigFile(config_name.c_str())) == NULL ) {
         printf("config data load error !!\n");
         exit(0);
     }
@@ -601,5 +453,13 @@ static void draw_table_always(){
 	//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	//glScaled(3,3,3);
 	ball.render();
-	//hole.render();
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glColorMask(0,0,0,0);
+	hole.render();
+	glCullFace(GL_FRONT);
+	glColorMask(1,1,1,1);
+	hole.render();
+	glCullFace(GL_BACK);
+	glDisable(GL_CULL_FACE);
 }
