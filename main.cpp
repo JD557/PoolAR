@@ -269,6 +269,7 @@ ARUint8 dataPtr2[640*480*4];
 /* main loop */
 static void mainLoop(void)
 {
+	
 	if( !MODEL_DEBUG ){
 		ARUint8         *dataPtr;
 		ARMarkerInfo    *marker_info;
@@ -353,6 +354,7 @@ static void mainLoop(void)
 		glutSwapBuffers();
 		glFlush();
 	}
+	
 }
 
 static void init( void )
@@ -431,7 +433,8 @@ static void drawObject( double trans1[3][4], double trans2[3][4], size_t marker 
 GLfloat ambi2[]   = {0.5, 0.5, 0.5, 0.5};
 static void draw_table_always(){
 
-	
+	world.dynamicsWorld->stepSimulation(1/30.f,10);
+		
 	glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
@@ -452,10 +455,25 @@ static void draw_table_always(){
 	glColorMask(1,1,1,1);
 	table.render();
 	
+	glPushMatrix();
+
+	glTranslated(world.fallRigidBody->getCenterOfMassPosition().getX(),
+				world.fallRigidBody->getCenterOfMassPosition().getZ(),
+				world.fallRigidBody->getCenterOfMassPosition().getY());
+
+	if(world.fallRigidBody->getCenterOfMassPosition().getY()==0){
+
+	}
 	ball.render();
+
+	glPopMatrix();
 
 	glCullFace(GL_FRONT);
 	hole.render();
 	glCullFace(GL_BACK);
 	glDisable(GL_CULL_FACE);
+
+
+	;
+
 }
