@@ -438,8 +438,9 @@ static void draw_table_always(){
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambi2);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
     //glMatrixMode(GL_MODELVIEW);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+    glDisable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_BACK);
 	
 	glClearColor(0,1,0,1);
     glClear(GL_COLOR_BUFFER_BIT);
