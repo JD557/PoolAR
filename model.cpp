@@ -1,10 +1,5 @@
-#ifdef _WIN32
-#include <windows.h>
-#endif
 #include "model.hpp"
 #include "tiny_obj_loader.hpp"
-#include <GL/gl.h>
-#include <GL/glut.h>
 #include <cmath>
 #include <iostream>
 using namespace tinyobj;
@@ -32,6 +27,13 @@ Model::Model(string filename) {
 			tempMaterial.emission[j]=shapes[i].material.emission[j];
 			tempMaterial.transmittance[j]=shapes[i].material.transmittance[j];
 		}
+		if (shapes[i].material.diffuse_texname.size()>0) {
+			glEnable(GL_TEXTURE_2D);
+			tempMaterial.texture=Texture(shapes[i].material.diffuse_texname);
+			tempMaterial.hasTexture=true;
+			glDisable(GL_TEXTURE_2D);
+
+		}
 		tempMaterial.ambient[3]=1.0f;
 		tempMaterial.diffuse[3]=1.0f;
 		tempMaterial.specular[3]=1.0f;
@@ -42,9 +44,11 @@ Model::Model(string filename) {
 		addMaterial(shapes[i].material.name,tempMaterial);
 		std::vector<float> positions = shapes[i].mesh.positions;
 		std::vector<float> normals   = shapes[i].mesh.normals;
+		std::vector<float> uvws       = shapes[i].mesh.texcoords;
 		std::vector<unsigned int> indices   = shapes[i].mesh.indices;
 		size_t numNorm = normals.size()/3;
 		size_t numFaces = indices.size()/3;
+		size_t numUvs = uvws.size()/2;
 		for (size_t j=0;j<numFaces;++j) {
 			Tri t;
 			t.material=shapes[i].material.name;
@@ -57,6 +61,13 @@ Model::Model(string filename) {
 				}
 				else {
 					t.normal[k]=Vec3d(0.0,0.0,1.0);
+				}
+				if (index<numUvs) {
+					t.uvw[k].x=uvws[index*3+0];
+					t.uvw[k].y=uvws[index*3+1];
+				}
+				else {
+					t.uvw[k]=Vec3d(0.0,0.0,0.0);
 				}
 				t.vertex[k].x=positions[index*3+0];
 				t.vertex[k].y=positions[index*3+1];
@@ -75,37 +86,47 @@ void Model::applyMaterial(string name) {
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat.diffuse);
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat.specular);
     glMaterialfv(GL_FRONT, GL_SHININESS, mat.shininess);
+    if (mat.hasTexture) {
+    	glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, mat.texture.id);
+    }
+    else {
+    	glDisable(GL_TEXTURE_2D);
+    }
 }
 
 void Model::render() {
 	lastUsedMaterial="";
 	// Render tris
-	glBegin(GL_TRIANGLES);
-	for (int i=0;i<tris.size();++i) {
+	for (size_t i=0;i<tris.size();++i) {
 		applyMaterial(tris[i].material);
+		glBegin(GL_TRIANGLES);
 		for (int j=0;j<3;++j) {
+			glTexCoord2f(tris[i].uvw[j].x,tris[i].uvw[j].y);
 			glNormal3f(tris[i].normal[j].x,tris[i].normal[j].y,tris[i].normal[j].z);
 			glVertex3f(tris[i].vertex[j].x,tris[i].vertex[j].y,tris[i].vertex[j].z);
 		}
+		glEnd();
 	}
-	glEnd();
 
 	// Render quads
-	glBegin(GL_QUADS);
-	for (int i=0;i<quads.size();++i) {
+	for (size_t i=0;i<quads.size();++i) {
 		applyMaterial(quads[i].material);
+		glBegin(GL_QUADS);
 		for (int j=0;j<4;++j) {
+			glTexCoord2f(quads[i].uvw[j].x,quads[i].uvw[j].y);
 			glNormal3f(quads[i].normal[j].x,quads[i].normal[j].y,quads[i].normal[j].z);
 			glVertex3f(quads[i].vertex[j].x,quads[i].vertex[j].y,quads[i].vertex[j].z);
 		}
+		glEnd();
 	}
-	glEnd();
 
 	// Render polys
-	for (int i=0;i<polys.size();++i) {
+	for (size_t i=0;i<polys.size();++i) {
 		applyMaterial(polys[i].material);
 		glBegin(GL_POLYGON);
-		for (int j=0;j<polys[i].vertex.size();++j) {
+		for (size_t j=0;j<polys[i].vertex.size();++j) {
+			glTexCoord2f(polys[i].uvw[j].x,polys[i].uvw[j].y);
 			glNormal3f(polys[i].normal[j].x,polys[i].normal[j].y,polys[i].normal[j].z);
 			glVertex3f(polys[i].vertex[j].x,polys[i].vertex[j].y,polys[i].vertex[j].z);
 		}
@@ -142,7 +163,8 @@ Model newHole(int sides,double radius,double depth) {
 
 		q.normal[3]=Vec3d(-cos(nextangle),-sin(nextangle),0.0);
 		q.vertex[3]=Vec3d(radius*cos(nextangle),radius*sin(nextangle),0.0);
-				
+		
+		p.uvw.push_back(Vec3d(0.0,0.0,0.0));		
 		p.normal.push_back(Vec3d(0.0,0.0,1.0));
 		p.vertex.push_back(Vec3d(radius*cos(-angle),radius*sin(-angle),-1.0*depth));
 
