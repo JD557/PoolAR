@@ -28,10 +28,8 @@ Model::Model(string filename) {
 			tempMaterial.transmittance[j]=shapes[i].material.transmittance[j];
 		}
 		if (shapes[i].material.diffuse_texname.size()>0) {
-			glEnable(GL_TEXTURE_2D);
 			tempMaterial.texture=Texture(shapes[i].material.diffuse_texname);
 			tempMaterial.hasTexture=true;
-			glDisable(GL_TEXTURE_2D);
 
 		}
 		tempMaterial.ambient[3]=1.0f;
@@ -42,9 +40,6 @@ Model::Model(string filename) {
 		tempMaterial.shininess[0]=shapes[i].material.shininess;
 
 		addMaterial(shapes[i].material.name,tempMaterial);
-		cout << shapes.size() << endl;
- 		cout << shapes[i].material.name << endl;
- 		cout << shapes[i].material.ambient[0] << endl;
 		std::vector<float> positions = shapes[i].mesh.positions;
 		std::vector<float> normals   = shapes[i].mesh.normals;
 		std::vector<float> uvws       = shapes[i].mesh.texcoords;
@@ -86,17 +81,18 @@ void Model::applyMaterial(string name) {
 	if (name==lastUsedMaterial) {return;}
 	Material mat = materials[name];
 	glDisable(GL_COLOR_MATERIAL);
+    if (mat.hasTexture) {
+    	glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, mat.texture.id);
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    }
+    else {
+    	glDisable(GL_TEXTURE_2D);
+    }
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat.ambient);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat.diffuse);
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat.specular);
     glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mat.shininess);
-    /*if (mat.hasTexture) {
-    	glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, mat.texture.id);
-    }
-    else {
-    	glDisable(GL_TEXTURE_2D);
-    }*/
 }
 
 void Model::render() {

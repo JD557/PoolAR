@@ -438,28 +438,23 @@ static void draw_table_always(){
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambi2);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
     //glMatrixMode(GL_MODELVIEW);
-    glDisable(GL_CULL_FACE);
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK);
-	
-	glClearColor(0,1,0,1);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glClear(GL_DEPTH_BUFFER_BIT);
 
-	
+
+	glClearColor(0,1,0,1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	glTranslated(mx,my,mz);
-	table.render();
-	
-	//glColor3d(255,0,0);
-	//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	//glScaled(3,3,3);
-	ball.render();
+
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glColorMask(0,0,0,0);
 	hole.render();
-	glCullFace(GL_FRONT);
 	glColorMask(1,1,1,1);
+	table.render();
+	
+	ball.render();
+
+	glCullFace(GL_FRONT);
 	hole.render();
 	glCullFace(GL_BACK);
 	glDisable(GL_CULL_FACE);
