@@ -18,29 +18,14 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "devil_cpp_wrapper.hpp"
+//#include "devil_cpp_wrapper.hpp"
 using namespace std;
 
 struct Texture {
 	GLuint id;
 	unsigned char* image;
-	Texture(string filename) {
-		glEnable(GL_TEXTURE_2D);
-		ilImage texture;
-		texture.Load(filename.c_str());
-		id=0;
-		glGenTextures(1, &id);
-		glBindTexture(GL_TEXTURE_2D, id);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
-		image=(unsigned char *)malloc(texture.Width()*texture.Height()*texture.Bpp());
-		for (size_t i=0;i<texture.Width()*texture.Height()*texture.Bpp();i++) {
-			image[i]=texture.GetData()[i];
-		}
-		glTexImage2D(GL_TEXTURE_2D, 0, texture.Bpp(), texture.Width(), texture.Height(), 0, texture.Format(), GL_UNSIGNED_BYTE, image);
-
-	}
-	Texture() {id=0;}
+	Texture(string filename);
+	Texture();
 };
 
 struct Vec3d {

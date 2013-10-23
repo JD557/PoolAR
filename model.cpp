@@ -2,7 +2,28 @@
 #include "tiny_obj_loader.hpp"
 #include <cmath>
 #include <iostream>
+#include "stb_image.c"
 using namespace tinyobj;
+
+Texture::Texture(string filename) {
+		glEnable(GL_TEXTURE_2D);
+		//ilImage texture;
+		//texture.Load(filename.c_str());
+		id=0;
+		glGenTextures(1, &id);
+		glBindTexture(GL_TEXTURE_2D, id);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
+		//image=(unsigned char *)malloc(texture.Width()*texture.Height()*texture.Bpp());
+		int w, h, d;
+		image = stbi_load(filename.c_str(), &w, &h, &d, 4);
+		//for (size_t i=0;i<texture.Width()*texture.Height()*texture.Bpp();i++) {
+		//	image[i]=texture.GetData()[i];
+		//}
+		//glTexImage2D(GL_TEXTURE_2D, 0, texture.Bpp(), texture.Width(), texture.Height(), 0, texture.Format(), GL_UNSIGNED_BYTE, image);
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	}
+Texture::Texture() {id=0;}
 
 Model::Model() {
 	addMaterial("default",Material());
