@@ -14,6 +14,7 @@ class Physics {
 
 		btCollisionShape* groundShape;
 		btCollisionShape* fallShape;
+		btCollisionShape* box;
 
 		btRigidBody* fallRigidBody;
 

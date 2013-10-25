@@ -213,6 +213,13 @@ static void   keyEvent( unsigned char key, int x, int y)
 	if( key == 'n' ) {
         printf("zzz: %f\n", --mz);
     }
+	if( key == '1' ) {
+		world.fallRigidBody->setLinearVelocity(btVector3(-1,0,0)*3);
+	}
+	if(key == '2'){
+		world.fallRigidBody->forceActivationState(1);
+		world.fallRigidBody->setLinearVelocity(btVector3(1,0,1)*3);
+	}
 	
 }
 
@@ -433,7 +440,7 @@ static void drawObject( double trans1[3][4], double trans2[3][4], size_t marker 
 GLfloat ambi2[]   = {0.5, 0.5, 0.5, 0.5};
 static void draw_table_always(){
 
-	world.dynamicsWorld->stepSimulation(1/30.f,10);
+	world.dynamicsWorld->stepSimulation(1/60.f);
 		
 	glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -457,13 +464,22 @@ static void draw_table_always(){
 	
 	glPushMatrix();
 
-	glTranslated(world.fallRigidBody->getCenterOfMassPosition().getX(),
-				world.fallRigidBody->getCenterOfMassPosition().getZ(),
-				world.fallRigidBody->getCenterOfMassPosition().getY());
+	btScalar	m[16];
+	
 
-	if(world.fallRigidBody->getCenterOfMassPosition().getY()==0){
-
+	btRigidBody* body=btRigidBody::upcast(world.fallRigidBody);
+	if(body&&body->getMotionState())
+	{
+		btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
+		myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+		
 	}
+
+	printf("%f\n",world.fallRigidBody->getLinearVelocity()[0]);
+	
+	glRotated(90,1,0,0);
+	glMultMatrixf(m);
+	
 	ball.render();
 
 	glPopMatrix();
