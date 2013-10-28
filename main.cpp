@@ -19,6 +19,7 @@
 #include "physics.hpp"
 #include "imgproc.hpp"
 
+
 #if AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGB
 	#define CHANNELS 3
 	#define CH1 r
@@ -59,7 +60,8 @@ string config_name = "Data/marker.dat";
 int             xsize, ysize;
 int             thresh = 100;
 int             icount = 0;
-
+int  DELTA_T = 15;
+GLUquadric* glQ;
 ARParam         cparam;
 //char                *config_name = "Data/multi/marker.dat";
 ARMultiMarkerInfoT  *config;
@@ -103,20 +105,13 @@ double tx=model_debug_camera[VIEW_MODE][0],
 	   my=model_debug_camera[VIEW_MODE][4],
 	   mz=model_debug_camera[VIEW_MODE][5];
 
+void tick(int a);
+
 int main(int argc, char **argv)
 {
 
 	glutInit(&argc, argv);
 	init();
-
-	for (int i=0 ; i<300 ; i++) {
-                world.dynamicsWorld->stepSimulation(1/15.f,10);
-
-                btTransform trans;
-                world.fallRigidBody->getMotionState()->getWorldTransform(trans);
-
-                //std::cout << "sphere height: " << trans.getOrigin().getY() << std::endl;
-       }
 
 	table = Model("Assets/pool.obj");
 	ball = Model("Assets/ball.obj");
@@ -214,11 +209,12 @@ static void   keyEvent( unsigned char key, int x, int y)
         printf("zzz: %f\n", --mz);
     }
 	if( key == '1' ) {
-		world.fallRigidBody->setLinearVelocity(btVector3(-1,0,0)*3);
+		world.getBalls()[0]->forceActivationState(1);
+		world.getBalls()[0]->setLinearVelocity(btVector3(-1,0,-1)*40);
 	}
 	if(key == '2'){
-		world.fallRigidBody->forceActivationState(1);
-		world.fallRigidBody->setLinearVelocity(btVector3(1,0,1)*3);
+		world.getBalls()[0]->forceActivationState(1);
+		world.getBalls()[0]->setLinearVelocity(btVector3(1,0,1)*40);
 	}
 	
 }
@@ -396,6 +392,8 @@ static void init( void )
     arImageProcMode = AR_IMAGE_PROC_IN_HALF;
     argDrawMode     = AR_DRAW_BY_TEXTURE_MAPPING;
     argTexmapMode   = AR_DRAW_TEXTURE_HALF_IMAGE;
+	glQ = gluNewQuadric();
+	glutTimerFunc(DELTA_T, tick, 0);
 }
 
 /* cleanup function called when program exits */
@@ -436,11 +434,11 @@ static void drawObject( double trans1[3][4], double trans2[3][4], size_t marker 
 	glDisable(GL_CULL_FACE);
 
 }
-
+//#include "Assets\floor.h"
 GLfloat ambi2[]   = {0.5, 0.5, 0.5, 0.5};
 static void draw_table_always(){
 
-	world.dynamicsWorld->stepSimulation(1/60.f);
+	
 		
 	glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -455,34 +453,70 @@ static void draw_table_always(){
 
 	glTranslated(mx,my,mz);
 
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_BACK);
 	glColorMask(0,0,0,0);
 	hole.render();
 	glColorMask(1,1,1,1);
 	table.render();
 	
-	glPushMatrix();
+	//printf("balls size: %d\n",world.getBalls().size());
+	/*
+	for(int i=0; i<15; ++i){
+		glBegin(GL_TRIANGLES);
+		printf("%f-- %f:%d %f:%d %f:%d\n",floor_verts[2], floor_verts[(int)floor_faces[i*3]*3+0],(int)floor_faces[i*3],
+										floor_verts[(int)floor_faces[i*3]*3+1],(int)floor_faces[i*3],
+										floor_verts[((int)floor_faces[i*3]*3)+2],(int)floor_faces[i*3]);
+		for(int j=0; j<3; ++j){
+			glVertex3f(floor_verts[(int)floor_faces[i*3+j]*3+0],
+						floor_verts[(int)floor_faces[i*3+j]*3+1],
+						floor_verts[((int)floor_faces[i*3+j]*3)+2]
+			);
+			
+		}
+		glEnd();
+		
+		
+
+		//198,floor_verts,sizeof(int)*3,204,floor_faces,sizeof(btScalar)*3
+	}*/
+
 
 	btScalar	m[16];
 	
+	for(int i=0; i< world.getBalls().size(); ++i){
+		glPushMatrix();
 
-	btRigidBody* body=btRigidBody::upcast(world.fallRigidBody);
-	if(body&&body->getMotionState())
-	{
-		btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
-		myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+		btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
+		if(body&&body->getMotionState())
+		{
+			btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
+			myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+		}
+
+		//printf("%f\n",body->getLinearVelocity()[0]);
+	
+		glRotated(90,1,0,0);
+		glMultMatrixf(m);
+	
 		
+		if(true){
+			glScaled(0.77,0.77,0.77);
+			glColor3f(1.0,1.0,0.0);		
+			gluQuadricOrientation( glQ, GLU_INSIDE);
+			gluSphere(glQ, 4.53 ,20, 20);
+			gluQuadricOrientation( glQ, GLU_OUTSIDE);
+		} else {
+			ball.render();
+		}
+		
+		
+
+
+		glPopMatrix();
+
 	}
-
-	printf("%f\n",world.fallRigidBody->getLinearVelocity()[0]);
 	
-	glRotated(90,1,0,0);
-	glMultMatrixf(m);
-	
-	ball.render();
-
-	glPopMatrix();
 
 	glCullFace(GL_FRONT);
 	hole.render();
@@ -492,4 +526,9 @@ static void draw_table_always(){
 
 	;
 
+}
+
+void tick(int a){
+	world.dynamicsWorld->stepSimulation((float)DELTA_T);
+	glutTimerFunc(DELTA_T, tick, 0);
 }

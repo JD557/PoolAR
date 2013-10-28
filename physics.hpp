@@ -3,25 +3,31 @@
 
 #include "bullet/include/btBulletDynamicsCommon.h"
 
+#include <vector>
+
+
 class Physics {
-	//private:
 	public:
+	//private:
 		btBroadphaseInterface* broadphase;
 		btDefaultCollisionConfiguration* collisionConfiguration;
 		btCollisionDispatcher* dispatcher;
 		btSequentialImpulseConstraintSolver* solver;
 		btDiscreteDynamicsWorld* dynamicsWorld;
 
+		btCollisionShape* ballShape;
 		btCollisionShape* groundShape;
-		btCollisionShape* fallShape;
-		btCollisionShape* box;
 
-		btRigidBody* fallRigidBody;
+		std::vector<btRigidBody*> balls;
 
-	//public:
+		btRigidBody* createBall(int n);
+		void createFloor();
+
+	public:
 		Physics();
 		~Physics();
-	
+
+		std::vector<btRigidBody*> getBalls();
 };
 
 #endif
