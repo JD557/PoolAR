@@ -95,6 +95,7 @@ Model::Model(string filename) {
 			tris.push_back(t);
 		}
 	}
+	generateVBOs();
 }
 
 void Model::applyMaterial(string name) {
@@ -118,6 +119,18 @@ void Model::applyMaterial(string name) {
 
 void Model::render() {
 	lastUsedMaterial="";
+	#if USING_VBO 
+	for (size_t i=0;i<vbos.size();++i) {
+		applyMaterial(vbos[i].material);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbos[i].id);
+		glVertexPointer(3, GL_DOUBLE, 8*sizeof(double), 0);
+		glNormalPointer(GL_DOUBLE, 8*sizeof(double),((char*) NULL)+3*sizeof(double));
+		glTexCoordPointer(2, GL_DOUBLE, 8*sizeof(double),((char*) NULL)+6*sizeof(double));
+		if (vbos[i].vertPerFace==3) {glDrawArrays(GL_TRIANGLES,0,vbos[i].elems);}
+		else {glDrawArrays(GL_QUADS,0,vbos[i].elems);}
+	}
+	#else
 	// Render tris
 	for (size_t i=0;i<tris.size();++i) {
 		applyMaterial(tris[i].material);
@@ -141,6 +154,7 @@ void Model::render() {
 		}
 		glEnd();
 	}
+	#endif
 
 	// Render polys
 	for (size_t i=0;i<polys.size();++i) {
@@ -165,6 +179,86 @@ void Model::addMaterial(string name, Material m) {
 void Model::addTri(Tri t) {tris.push_back(t);}
 void Model::addQuad(Quad q) {quads.push_back(q);}
 void Model::addPoly(Poly p) {polys.push_back(p);}
+
+void Model::generateVBOs() {
+	VBO vbo;
+	vbo.vertPerFace = 3;
+	vbo.elems = 0;
+	// Add tris
+	if (tris.size()>0) {
+		vbo.material=tris[0].material;
+		lastUsedMaterial=vbo.material;
+		for (size_t i=0;i<tris.size();++i) {
+			if (tris[i].material!=lastUsedMaterial) {
+				glGenBuffers(1,&vbo.id);
+				glBindBuffer(GL_ARRAY_BUFFER, vbo.id);
+				glBufferData(GL_ARRAY_BUFFER, vbo.data.size()*sizeof(double), &vbo.data[0], GL_STATIC_DRAW);
+				vbos.push_back(vbo);
+				vbo = VBO();
+				vbo.vertPerFace = 3;
+				vbo.elems = 0;
+				vbo.material=tris[i].material;
+				lastUsedMaterial=vbo.material;
+			}
+			for (int j=0;j<3;++j) {
+				vbo.data.push_back(tris[i].vertex[j].x);
+				vbo.data.push_back(tris[i].vertex[j].y);
+				vbo.data.push_back(tris[i].vertex[j].z);
+
+				vbo.data.push_back(tris[i].normal[j].x);
+				vbo.data.push_back(tris[i].normal[j].y);
+				vbo.data.push_back(tris[i].normal[j].z);
+
+				vbo.data.push_back(tris[i].uvw[j].x);
+				vbo.data.push_back(tris[i].uvw[j].y);
+				vbo.elems++;
+			}
+		}
+		glGenBuffers(1,&vbo.id);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo.id);
+		glBufferData(GL_ARRAY_BUFFER, vbo.data.size()*sizeof(double), &vbo.data[0], GL_STATIC_DRAW);
+		vbos.push_back(vbo);
+	}
+
+	// Add quads
+	vbo = VBO();
+	vbo.vertPerFace = 4;
+	vbo.elems = 0;
+	if (quads.size()>0) {
+		vbo.material=quads[0].material;
+		lastUsedMaterial=vbo.material;
+		for (size_t i=0;i<quads.size();++i) {
+			if (quads[i].material!=lastUsedMaterial) {
+				glGenBuffers(1,&vbo.id);
+				glBindBuffer(GL_ARRAY_BUFFER, vbo.id);
+				glBufferData(GL_ARRAY_BUFFER, vbo.data.size()*sizeof(double), &vbo.data[0], GL_STATIC_DRAW);
+				vbos.push_back(vbo);
+				vbo = VBO();
+				vbo.vertPerFace = 4;
+				vbo.elems = 0;
+				vbo.material=quads[i].material;
+				lastUsedMaterial=vbo.material;
+			}
+			for (int j=0;j<4;++j) {
+				vbo.data.push_back(quads[i].vertex[j].x);
+				vbo.data.push_back(quads[i].vertex[j].y);
+				vbo.data.push_back(quads[i].vertex[j].z);
+
+				vbo.data.push_back(quads[i].normal[j].x);
+				vbo.data.push_back(quads[i].normal[j].y);
+				vbo.data.push_back(quads[i].normal[j].z);
+
+				vbo.data.push_back(quads[i].uvw[j].x);
+				vbo.data.push_back(quads[i].uvw[j].y);
+				vbo.elems++;
+			}
+		}
+		glGenBuffers(1,&vbo.id);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo.id);
+		glBufferData(GL_ARRAY_BUFFER, vbo.data.size()*sizeof(double), &vbo.data[0], GL_STATIC_DRAW);
+		vbos.push_back(vbo);
+	}
+}
 
 Model newHole(int sides,double radius,double depth) {
 	Model m;
@@ -208,5 +302,6 @@ Model newHole(int sides,double radius,double depth) {
 	mat.specular[3]  = 1.0;
 	mat.shininess[0] = 0.5;
 	m.addMaterial(mat);
+	m.generateVBOs();
 	return m;
 }

@@ -4,6 +4,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glut.h>
 
@@ -20,6 +21,16 @@
 #include <iostream>
 //#include "devil_cpp_wrapper.hpp"
 using namespace std;
+
+#define USING_VBO true
+
+struct VBO {
+	GLuint id;
+	int elems;
+	int vertPerFace;
+	vector<double> data;
+	string material;
+};
 
 struct Texture {
 	GLuint id;
@@ -92,6 +103,7 @@ class Model {
 		vector<Tri> tris;
 		vector<Quad> quads;
 		vector<Poly> polys;
+		vector<VBO> vbos;
 	public:
 		Model();
 		Model(string filename);
@@ -102,6 +114,7 @@ class Model {
 		void addTri(Tri t);
 		void addQuad(Quad q);
 		void addPoly(Poly p);
+		void generateVBOs();
 };
 
 Model newHole(int sides,double radius,double depth);
