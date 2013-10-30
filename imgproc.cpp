@@ -1,5 +1,9 @@
 #include "imgproc.hpp"
 
+unsigned char *tempBuffer=NULL;
+size_t wAlloc = 0;
+size_t hAlloc = 0;
+
 void alphaErode(unsigned char *data, int w, int h) {
 	int kernel[5][5];
 	kernel[0][0]=0;kernel[0][1]=1;kernel[0][2]=1;kernel[0][3]=1;kernel[0][4]=0;
@@ -8,34 +12,36 @@ void alphaErode(unsigned char *data, int w, int h) {
 	kernel[3][0]=1;kernel[3][1]=1;kernel[3][2]=1;kernel[3][3]=1;kernel[3][4]=1;
 	kernel[4][0]=0;kernel[4][1]=1;kernel[4][2]=1;kernel[4][3]=1;kernel[4][4]=0;
 
-	unsigned char *erodedBuffer=(unsigned char*)malloc(h*w);
-	for(int i=0; i<h*w; ++i)  {erodedBuffer[i]=255;}
+	if (wAlloc*hAlloc<w*h) {
+		if (tempBuffer!=NULL) {free(tempBuffer);}
+		tempBuffer=(unsigned char*)malloc(h*w);
+	}
 
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
-			size_t pos=640*y+x;
-			if (y<=1 || x<=1 || x>=w-2 || y>=h-2) {
-				erodedBuffer[pos]=data[4*pos+3];
-			}
-			else if (data[4*pos+3]==0) {
-				for (int i=0;i<5;++i) {
-					for (int j=0;j<5;++j) {
-						size_t newPos=640*(y+i-2)+x+j-2;
-						if (kernel[i][j]==1) {
-							erodedBuffer[newPos]=0;
+			int pos=640*y+x;
+			int min=255;
+			for (int i=0;i<5 && min!=0;++i) {
+				int _y=y+i-2;
+				if (_y>=0 || _y<h) {
+					for (int j=0;j<5 && min!=0;++j) {
+						int _x=x+j-2;
+						if (kernel[i][j] && (_x>=0 || _x<w)) {
+							int newPos = 640*_y+_x;
+							min = data[4*pos+3]<min?data[4*pos+3]:min;
 						}
 					}
 				}
 			}
+			tempBuffer[pos]=min;
 		}
 	}
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
 			size_t pos=640*y+x;
-			data[4*pos+3]=erodedBuffer[pos];
+			data[4*pos+3]=tempBuffer[pos];
 		}
 	}
-	free(erodedBuffer);
 }
 
 void alphaDilate(unsigned char *data, int w, int h) {
@@ -46,33 +52,36 @@ void alphaDilate(unsigned char *data, int w, int h) {
 	kernel[3][0]=1;kernel[3][1]=1;kernel[3][2]=1;kernel[3][3]=1;kernel[3][4]=1;
 	kernel[4][0]=0;kernel[4][1]=1;kernel[4][2]=1;kernel[4][3]=1;kernel[4][4]=0;
 
-	unsigned char *dilatedBuffer=(unsigned char*)malloc(h*w);
-	for(int i=0; i<h*w; ++i)  {dilatedBuffer[i]=0;}
+	if (wAlloc*hAlloc<w*h) {
+		if (tempBuffer!=NULL) {free(tempBuffer);}
+		tempBuffer=(unsigned char*)malloc(h*w);
+	}
+
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
-			size_t pos=640*y+x;
-			if (y<=1 || x<=1 || x>=w-2 || y>=h-2) {
-				dilatedBuffer[pos]=data[4*pos+3];
-			}
-			else if (data[4*pos+3]==255) {
-				for (int i=0;i<5;++i) {
-					for (int j=0;j<5;++j) {
-						size_t newPos=640*(y+i-2)+x+j-2;
-						if (kernel[i][j]==1) {
-							dilatedBuffer[newPos]=255;
+			int pos=640*y+x;
+			int max=0;
+			for (int i=0;i<5 && max!=255;++i) {
+				int _y=y+i-2;
+				if (_y>=0 || _y<h) {
+					for (int j=0;j<5 && max!=255;++j) {
+						int _x=x+j-2;
+						if (kernel[i][j] && (_x>=0 || _x<w)) {
+							int newPos = 640*_y+_x;
+							max = data[4*pos+3]>max?data[4*pos+3]:max;
 						}
 					}
 				}
 			}
+			tempBuffer[pos]=max;
 		}
 	}
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
 			size_t pos=640*y+x;
-			data[4*pos+3]=dilatedBuffer[pos];
+			data[4*pos+3]=tempBuffer[pos];
 		}
 	}
-	free(dilatedBuffer);
 }
 
 void alphaHisteresis(unsigned char *data, int w, int h,int lowThres, int highThres) {
@@ -117,12 +126,15 @@ void alphaGaussianBlur(unsigned char *data, int w, int h) {
 	kernel[4][0]=1;kernel[4][1]=4;kernel[4][2]=7;kernel[4][3]=4;kernel[4][4]=1;
 	int scale=273;
 
-	unsigned char *smoothBuffer=(unsigned char*)malloc(h*w);
+	if (wAlloc*hAlloc<w*h) {
+		if (tempBuffer!=NULL) {free(tempBuffer);}
+		tempBuffer=(unsigned char*)malloc(h*w);
+	}
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
 			size_t pos=640*y+x;
 			if (y<=1 || x<=1 || x>=w-2 || y>=h-2) {
-				smoothBuffer[pos]=data[4*pos+3];
+				tempBuffer[pos]=data[4*pos+3];
 			}
 			else {
 				unsigned int accum=0;
@@ -132,15 +144,14 @@ void alphaGaussianBlur(unsigned char *data, int w, int h) {
 						accum+=kernel[i][j]*data[4*(newPos)+3];
 					}
 				}
-				smoothBuffer[pos]=accum/scale;
+				tempBuffer[pos]=accum/scale;
 			}
 		}
 	}
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
 			size_t pos=640*y+x;
-			data[4*pos+3]=smoothBuffer[pos];
+			data[4*pos+3]=tempBuffer[pos];
 		}
 	}
-	free(smoothBuffer);
 }

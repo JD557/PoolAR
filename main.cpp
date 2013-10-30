@@ -21,7 +21,7 @@
 #include "model.hpp"
 #include "physics.hpp"
 #include "imgproc.hpp"
-
+#include "light.hpp"
 
 #if AR_DEFAULT_PIXEL_FORMAT == AR_PIXEL_FORMAT_RGB
 	#define CHANNELS 3
@@ -45,60 +45,60 @@
 	#define CH3 r
 #endif
 
-#define MODEL_DEBUG false
+#define MODEL_DEBUG 0
 
 //
 // Camera configuration.
 //
 #ifdef _WIN32
-string vconf = "Data\\WDM_camera_flipV.xml";
+string vconf       = "Data\\WDM_camera_flipV.xml";
 string cparam_name = "Data\\camera_para.dat";
 string config_name = "Data\\marker.dat";
 #else
-string vconf = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+string vconf          = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 string cparam_name    = "Data/camera_para.dat";
-string config_name = "Data/marker.dat";
+string config_name    = "Data/marker.dat";
 #endif
 
-int             xsize, ysize;
-int             thresh = 100;
-int             icount = 0;
+int xsize, ysize;
+int thresh = 100;
+int icount = 0;
 
-int FRAME_RATE = 60;
-btScalar  TICK_RATE = 1.0/FRAME_RATE;
-int  DELTA_T = 1000.0/FRAME_RATE;
+int FRAME_RATE     = 60;
+btScalar TICK_RATE = 1.0/FRAME_RATE;
+int  DELTA_T       = 1000.0/FRAME_RATE;
 
 
 GLUquadric* glQ;
-ARParam         cparam;
-//char                *config_name = "Data/multi/marker.dat";
-ARMultiMarkerInfoT  *config;
-
-int             patt_id;
-double          patt_width     = 80.0;
-double          patt_center[2] = {0.0, 0.0};
-double          patt_trans[3][4];
+ARParam cparam;
+ARMultiMarkerInfoT *config;
 
 double    gl_para[16];
-GLfloat   light_position[]  = {100.0,-200.0,200.0,0.0};
-GLfloat   ambi[]            = {0.1, 0.1, 0.1, 0.1};
-GLfloat ambi2[]   = {0.5, 0.5, 0.5, 0.5};
-GLfloat   lightZeroColor[]  = {0.9, 0.9, 0.9, 0.1};
 
-static void   init(void);
-static void   cleanup(void);
-static void   keyEvent( unsigned char key, int x, int y);
-static void   mainLoop(void);
-static void   drawObject( double trans1[3][4], double trans2[3][4]);
-static void   draw_table_always();
+void init(void);
+void cleanup(void);
+void keyEvent( unsigned char key, int x, int y);
+void mainLoop(void);
+void drawObject( double trans1[3][4], double trans2[3][4]);
+void tick(int a);
+void loadModels();
 
 Model hole;
 Model table;
 Model ball;
+
 GLuint videoTexture;
+
+Light mainLight;
+
 Physics world;
 
+ARUint8 overlayBuffer[640*480*4];
+ARUint8 *doubleBuffer;
+
 //mode debug
+#if MODEL_DEBUG
+void draw_table_always();
 float xy_aspect = (float)640 / (float)720;
 double cam_up_vec[] = { 0 , 1 , 0};
 int VIEW_MODE=0, NR_VIEW_MODE=2;
@@ -113,22 +113,12 @@ double tx=model_debug_camera[VIEW_MODE][0],
 	   mx=model_debug_camera[VIEW_MODE][3],
 	   my=model_debug_camera[VIEW_MODE][4],
 	   mz=model_debug_camera[VIEW_MODE][5];
-
-void tick(int a);
+#endif
 
 int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
 	init();
-	glewInit();
-
-	table = Model("Assets/pool.obj");
-	ball = Model("Assets/ball.obj");
-	hole = newHole(25,6.15,6.15);
-	glEnable(GL_TEXTURE_2D);
-	glGenTextures(1, &videoTexture);
-	glBindTexture(GL_TEXTURE_2D, 1);
-	glDisable(GL_TEXTURE_2D);
 
     arVideoCapStart();
     argMainLoop( NULL, keyEvent, mainLoop );
@@ -137,95 +127,60 @@ int main(int argc, char **argv)
 
 
 
-static void   keyEvent( unsigned char key, int x, int y)
+void   keyEvent( unsigned char key, int x, int y)
 {
-    /* quit if the ESC key is pressed */
-    if( key == 0x1b ) {
-        printf("*** %f (frame/sec)\n", (double)icount/arUtilTimer());
-        cleanup();
-        exit(0);
-    }
-	/*
-	 if( key == 't' ) {
-        printf("*** %f (frame/sec)\n", (double)icount/arUtilTimer());
-        printf("Enter new threshold value (current = %d): ", thresh);
-        scanf("%d",&thresh); while( getchar()!='\n' );
-        printf("\n");
-        icount = 0;
-    }
-	*/
-    /* turn on and off the debug mode with right mouse */
-    if( key == 'd' ) {
-        printf("*** %f (frame/sec)\n", (double)icount/arUtilTimer());
-        arDebug = 1 - arDebug;
-        if( arDebug == 0 ) {
-            glClearColor( 0.0, 0.0, 0.0, 0.0 );
-            glClear(GL_COLOR_BUFFER_BIT);
-            argSwapBuffers();
-            glClear(GL_COLOR_BUFFER_BIT);
-            argSwapBuffers();
-        }
-        icount = 0;
-    }
+    switch (key) {
+    	case 0x1b: // ESC - quit
+	        printf("*** %f (frame/sec)\n", (double)icount/arUtilTimer());
+        	cleanup();
+        	exit(0);
+        	break;
+        case 'd': // Debug mode
+            printf("*** %f (frame/sec)\n", (double)icount/arUtilTimer());
+        	arDebug = 1 - arDebug;
+        	if( arDebug == 0 ) {
+           		glClearColor( 0.0, 0.0, 0.0, 0.0 );
+            	glClear(GL_COLOR_BUFFER_BIT);
+            	argSwapBuffers();
+            	glClear(GL_COLOR_BUFFER_BIT);
+            	argSwapBuffers();
+        	}
+        	icount = 0;
+        	break;
+		case '1': // Move ball
+    		world.getBalls()[0]->forceActivationState(1);
+			world.getBalls()[0]->setLinearVelocity(btVector3(-1,0,-1)*40);
+			break;
+	    case '2': // Move ball
+			world.getBalls()[0]->forceActivationState(1);
+			world.getBalls()[0]->setLinearVelocity(btVector3(1,0,1)*40);
+		break;
+    #if MODEL_DEBUG // MODEL DEBUG ONLY KEYS
+        case '\\': // Change view mode
+        	if(++VIEW_MODE==NR_VIEW_MODE) {VIEW_MODE=0;}
+			
+			tx=model_debug_camera[VIEW_MODE][0];
+			ty=model_debug_camera[VIEW_MODE][1];
+			tz=model_debug_camera[VIEW_MODE][2];
+			mx=model_debug_camera[VIEW_MODE][3];
+			my=model_debug_camera[VIEW_MODE][4];
+			mz=model_debug_camera[VIEW_MODE][5];
+			break;
 
-	if( key == '\\' ) {
-        if(++VIEW_MODE==NR_VIEW_MODE)
-			VIEW_MODE=0;
-
-	   tx=model_debug_camera[VIEW_MODE][0];
-	   ty=model_debug_camera[VIEW_MODE][1];
-	   tz=model_debug_camera[VIEW_MODE][2];
-	   mx=model_debug_camera[VIEW_MODE][3];
-	   my=model_debug_camera[VIEW_MODE][4];
-	   mz=model_debug_camera[VIEW_MODE][5];
+		case 'q':printf("x: %f\n", ++tx);break;
+		case 'w':printf("x: %f\n", ++ty);break;
+		case 'e':printf("x: %f\n", ++tz);break;
+		case 'z':printf("x: %f\n", --tx);break;
+		case 'x':printf("y: %f\n", --ty);break;
+		case 'c':printf("y: %f\n", --ty);break;
+		case 'r':printf("xxx: %f\n", ++mx);break;
+		case 't':printf("yyy: %f\n", ++my);break;
+		case 'y':printf("zzz: %f\n", ++mz);break;
+		case 'v':printf("xxx: %f\n", --mx);break;
+		case 'b':printf("yyy: %f\n", --my);break;
+		case 'n':printf("zzz: %f\n", --mz);break;
+	#endif
     }
-	
-	if( key == 'q' ) {
-        printf("x: %f\n", ++tx);
-    }
-	if( key == 'w' ) {
-        printf("x: %f\n", ++ty);
-    }
-	if( key == 'e' ) {
-        printf("x: %f\n", ++tz);
-    }
-	if( key == 'z' ) {
-        printf("x: %f\n", --tx);
-    }
-	if( key == 'x' ) {
-        printf("y: %f\n", --ty);
-    }
-	if( key == 'c' ) {
-        printf("z: %f\n", --tz);
-    }
-
-	if( key == 'r' ) {
-        printf("xxx: %f\n", ++mx);
-    }
-	if( key == 't' ) {
-        printf("yyy: %f\n", ++my);
-    }
-	if( key == 'y' ) {
-        printf("zzz: %f\n", ++mz);
-    }
-	if( key == 'v' ) {
-        printf("xxx: %f\n", --mx);
-    }
-	if( key == 'b' ) {
-        printf("yyy: %f\n", --my);
-    }
-	if( key == 'n' ) {
-        printf("zzz: %f\n", --mz);
-    }
-	if( key == '1' ) {
-		world.getBalls()[0]->forceActivationState(1);
-		world.getBalls()[0]->setLinearVelocity(btVector3(-1,0,-1)*40);
-	}
-	if(key == '2'){
-		world.getBalls()[0]->forceActivationState(1);
-		world.getBalls()[0]->setLinearVelocity(btVector3(1,0,1)*40);
-	}
-	
 }
 
 void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,int maxSat) {
@@ -260,11 +215,12 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 		}
 	}
 
-	alphaGaussianBlur(dataOut,w,h);
-	alphaHisteresis(dataOut,w,h,125,150);
+	//alphaGaussianBlur(dataOut,w,h);
+	alphaHisteresis(dataOut,w,h,100,150);
 	alphaDilate(dataOut,w,h);
 	alphaErode(dataOut,w,h);
 	alphaGaussianBlur(dataOut,w,h);
+	//alphaHisteresis(dataOut,w,h,125,150);
 	/* ALPHA DEBUG */
 	/*for (size_t i=0;i<w*h;i++) {
 		dataOut[4*i]=dataOut[4*i+3];
@@ -274,117 +230,106 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 
 }
 
-ARUint8 dataPtr2[640*480*4];
-
-
-ARUint8         *dataPtr_copy;
 /* main loop */
-static void mainLoop(void)
+void mainLoop(void)
 {
 	
-	if( !MODEL_DEBUG ){
-		ARUint8         *dataPtr;
-		ARMarkerInfo    *marker_info;
-		int             marker_num;
-		double          err;
+#if MODEL_DEBUG == 0 //Normal Mode
+	ARUint8         *dataPtr;
+	ARMarkerInfo    *marker_info;
+	int             marker_num;
+	double          err;
+	bool needsUpdate = false;
 
-   
-		if( (dataPtr = (ARUint8 *)arVideoGetImage()) == NULL ) {
-			dataPtr = dataPtr_copy;
-		}
-		else {
-			dataPtr_copy = dataPtr;
-			generateOverMask(dataPtr,dataPtr2,640,480,15,30);
-			glBindTexture(GL_TEXTURE_2D,videoTexture);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
-			glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, dataPtr2);
-		}
-		if( icount == 0 ) arUtilTimerReset();
-		icount++;
 
-		argDrawMode2D();
-		argDispImage( dataPtr, 0,0 );
-
-		if( arDetectMarker(dataPtr, thresh, &marker_info, &marker_num) < 0 ) {
-			cleanup();
-			exit(0);
-		}
-		arVideoCapNext();
-
-		if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
-			argSwapBuffers();
-			return;
-		}
-		if(err > 100.0 ) {
-			argSwapBuffers();
-			return;
-		}
-	
-		argDrawMode3D();
-		argDraw3dCamera( 0, 0 );
-		glClearDepth( 1.0 );
-		glClear(GL_DEPTH_BUFFER_BIT);
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	
-		/*for(int i = 0; i < config->marker_num; i++ ) {
-		   drawObject( config->trans, config->marker[i].trans, i );
-		}*/
-		drawObject( config->trans, config->marker[0].trans);
-
-		glDisable( GL_LIGHTING );
-		glDisable( GL_DEPTH_TEST );
-
-		argDrawMode2D();
-		glEnable(GL_TEXTURE_2D);
-		glEnable(GL_ALPHA);
-		glEnable(GL_BLEND);
-		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	if( (dataPtr = (ARUint8 *)arVideoGetImage()) == NULL ) {
+		dataPtr = doubleBuffer;
+	}
+	else {
+		doubleBuffer = dataPtr;
+		needsUpdate = true;
+	}
+	if( icount == 0 ) arUtilTimerReset();
+	icount++;
+	argDrawMode2D();
+	argDispImage( dataPtr, 0,0 );
+	if (needsUpdate) {
+		generateOverMask(dataPtr,overlayBuffer,640,480,15,30);
 		glBindTexture(GL_TEXTURE_2D,videoTexture);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
-		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
-		glEnable(GL_COLOR_MATERIAL);
-		int deltaY=240;
-		glBegin(GL_QUADS);
-			glTexCoord2d(0,1); glVertex2f(0, 0+deltaY);
-			glTexCoord2d(1,1); glVertex2f(640, 0+deltaY);
-			glTexCoord2d(1,0); glVertex2f(640, 480+deltaY);
-			glTexCoord2d(0,0); glVertex2f(0, 480+deltaY);
-		glEnd();
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_COLOR_MATERIAL);
-		glDisable(GL_ALPHA);
-		glDisable(GL_BLEND);
-	
-		argSwapBuffers();
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, overlayBuffer);
 	}
-	else {
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glEnable(GL_DEPTH_TEST);
-		glMatrixMode( GL_PROJECTION );
-		glLoadIdentity();	
-		glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 500.0 );
-		glMatrixMode( GL_MODELVIEW );
-		glLoadIdentity();
-		gluLookAt(tx,ty,tz,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
-		glEnable(GL_LIGHTING);
-    	glEnable(GL_LIGHT0);
-    	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    	glLightfv(GL_LIGHT0, GL_AMBIENT, ambi2);
-    	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
-		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-		draw_table_always();
-		glutSwapBuffers();
-		glFlush();
+	if( arDetectMarker(dataPtr, thresh, &marker_info, &marker_num) < 0 ) {
+		cleanup();
+		exit(0);
 	}
+	arVideoCapNext();
+
+	if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
+		argSwapBuffers();
+		return;
+	}
+	if(err > 100.0 ) {
+		argSwapBuffers();
+		return;
+	}
+
+	argDrawMode3D();
+	argDraw3dCamera( 0, 0 );
+	glClearDepth( 1.0 );
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+	drawObject( config->trans, config->marker[0].trans);
+
+	glDisable( GL_LIGHTING );
+	glDisable( GL_DEPTH_TEST );
+
+	argDrawMode2D();
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBindTexture(GL_TEXTURE_2D,videoTexture);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
+	glEnable(GL_COLOR_MATERIAL);
+	int deltaY=240;
+	glBegin(GL_QUADS);
+		glTexCoord2d(0,1); glVertex2f(0, 0+deltaY);
+		glTexCoord2d(1,1); glVertex2f(640, 0+deltaY);
+		glTexCoord2d(1,0); glVertex2f(640, 480+deltaY);
+		glTexCoord2d(0,0); glVertex2f(0, 480+deltaY);
+	glEnd();
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_COLOR_MATERIAL);
+	glDisable(GL_ALPHA);
+	glDisable(GL_BLEND);
+
+	argSwapBuffers();
+#else // Debug Mode
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glMatrixMode( GL_PROJECTION );
+	glLoadIdentity();	
+	glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 500.0 );
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+	gluLookAt(tx,ty,tz,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
+	glEnable(GL_LIGHTING);
+	mainLight.use();
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	draw_table_always();
+	glutSwapBuffers();
+	glFlush();
+#endif
 	
 }
 
-static void init( void )
+void init( void )
 {
 
 	 ARParam  wparam;
@@ -416,18 +361,37 @@ static void init( void )
     arImageProcMode = AR_IMAGE_PROC_IN_HALF;
     argDrawMode     = AR_DRAW_BY_TEXTURE_MAPPING;
     argTexmapMode   = AR_DRAW_TEXTURE_HALF_IMAGE;
-	glQ = gluNewQuadric();
+
+    // Setup Physics
 	glutTimerFunc(0, tick, 0);
+
+	// Seutp VBOs
+	glewInit();
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	// Setup Lights
+	mainLight.setPosition(100.0,-200.0,200.0);
+	mainLight.setAmbient(0.1, 0.1, 0.1);
+	mainLight.setColor(0.9, 0.9, 0.9);
+
+	// Setup Models
+	glQ = gluNewQuadric();
+	loadModels();
+
+	// Setup overdraw
+	glEnable(GL_TEXTURE_2D);
+	glGenTextures(1, &videoTexture);
+	glBindTexture(GL_TEXTURE_2D, 1);
+	glDisable(GL_TEXTURE_2D);
 }
 
 /* cleanup function called when program exits */
-static void cleanup(void)
+void cleanup(void)
 {
     arVideoCapStop();
     arVideoClose();
@@ -457,7 +421,7 @@ void renderHoles() {
 	glPopMatrix();
 }
 
-static void drawObject( double trans1[3][4], double trans2[3][4])
+void drawObject( double trans1[3][4], double trans2[3][4])
 {
     
 	glMatrixMode(GL_MODELVIEW);
@@ -467,11 +431,7 @@ static void drawObject( double trans1[3][4], double trans2[3][4])
     glMultMatrixd( gl_para );
 
     glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, ambi);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
-    glMatrixMode(GL_MODELVIEW);
+    mainLight.use();
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
@@ -502,10 +462,8 @@ static void drawObject( double trans1[3][4], double trans2[3][4])
 	glDisable(GL_CULL_FACE);
 }
 
-static void draw_table_always(){
-
-	//glClearColor(0,1,0,1);
-    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#if MODEL_DEBUG
+void draw_table_always(){
 
 	glTranslated(mx,my,mz);
 
@@ -515,28 +473,6 @@ static void draw_table_always(){
 	hole.render();
 	glColorMask(1,1,1,1);
 	table.render();
-	
-	//printf("balls size: %d\n",world.getBalls().size());
-	/*
-	for(int i=0; i<15; ++i){
-		glBegin(GL_TRIANGLES);
-		printf("%f-- %f:%d %f:%d %f:%d\n",floor_verts[2], floor_verts[(int)floor_faces[i*3]*3+0],(int)floor_faces[i*3],
-										floor_verts[(int)floor_faces[i*3]*3+1],(int)floor_faces[i*3],
-										floor_verts[((int)floor_faces[i*3]*3)+2],(int)floor_faces[i*3]);
-		for(int j=0; j<3; ++j){
-			glVertex3f(floor_verts[(int)floor_faces[i*3+j]*3+0],
-						floor_verts[(int)floor_faces[i*3+j]*3+1],
-						floor_verts[((int)floor_faces[i*3+j]*3)+2]
-			);
-			
-		}
-		glEnd();
-		
-		
-
-		//198,floor_verts,sizeof(int)*3,204,floor_faces,sizeof(btScalar)*3
-	}*/
-
 
 	btScalar	m[16];
 	
@@ -549,39 +485,24 @@ static void draw_table_always(){
 			btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
 			myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
 		}
-
-		//printf("%f\n",body->getLinearVelocity()[0]);
 	
 		glRotated(90,1,0,0);
 		glMultMatrixf(m);
 	
-		
-		if(false){
-			
-			glColor3f(1.0,1.0,0.0);		
-			gluQuadricOrientation( glQ, GLU_INSIDE);
-			gluSphere(glQ, 4.53 ,20, 20);
-			gluQuadricOrientation( glQ, GLU_OUTSIDE);
-		} else {
-			ball.render();
-		}
-		
-		
-
-
+		ball.render();
 		glPopMatrix();
-
 	}
-	
-
 	glCullFace(GL_FRONT);
 	hole.render();
 	glCullFace(GL_BACK);
 	glDisable(GL_CULL_FACE);
+}
+#endif
 
-
-	;
-
+void loadModels() {
+	table = Model("Assets/pool.obj");
+	ball = Model("Assets/ball.obj");
+	hole = newHole(25,6.15,6.15);
 }
 
 void tick(int a){

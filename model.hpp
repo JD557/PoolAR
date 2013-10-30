@@ -19,7 +19,6 @@
 #include <vector>
 #include <string>
 #include <iostream>
-//#include "devil_cpp_wrapper.hpp"
 using namespace std;
 
 #define USING_VBO 1
