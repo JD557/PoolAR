@@ -1,6 +1,5 @@
 #ifdef _WIN32
 #include <windows.h>
-#else
 #include <GL/glew.h>
 #pragma comment(lib,"glew32.lib")
 #else
@@ -532,7 +531,7 @@ static void draw_table_always(){
 		glMultMatrixf(m);
 	
 		
-		if(true){
+		if(false){
 			
 			glColor3f(1.0,1.0,0.0);		
 			gluQuadricOrientation( glQ, GLU_INSIDE);
