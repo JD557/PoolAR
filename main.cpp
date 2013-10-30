@@ -82,6 +82,7 @@ double          patt_trans[3][4];
 double    gl_para[16];
 GLfloat   light_position[]  = {100.0,-200.0,200.0,0.0};
 GLfloat   ambi[]            = {0.1, 0.1, 0.1, 0.1};
+GLfloat ambi2[]   = {0.5, 0.5, 0.5, 0.5};
 GLfloat   lightZeroColor[]  = {0.9, 0.9, 0.9, 0.1};
 
 static void   init(void);
@@ -362,7 +363,14 @@ static void mainLoop(void)
 		glMatrixMode( GL_PROJECTION );
 		glLoadIdentity();	
 		glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 500.0 );
+		glMatrixMode( GL_MODELVIEW );
+		glLoadIdentity();
 		gluLookAt(tx,ty,tz,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
+		glEnable(GL_LIGHTING);
+    	glEnable(GL_LIGHT0);
+    	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    	glLightfv(GL_LIGHT0, GL_AMBIENT, ambi2);
+    	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
 		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 		draw_table_always();
 		glutSwapBuffers();
@@ -376,7 +384,14 @@ static void mainLoop(void)
 		glMatrixMode( GL_PROJECTION );
 		glLoadIdentity();	
 		glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 500.0 );
+		glMatrixMode( GL_MODELVIEW );
+		glLoadIdentity();
 		gluLookAt(tx,ty,tz,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
+		glEnable(GL_LIGHTING);
+    	glEnable(GL_LIGHT0);
+    	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    	glLightfv(GL_LIGHT0, GL_AMBIENT, ambi2);
+    	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
 		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 		draw_table_always();
 		glutSwapBuffers();
@@ -465,19 +480,7 @@ static void drawObject( double trans1[3][4], double trans2[3][4], size_t marker 
 	glDisable(GL_CULL_FACE);
 
 }
-//#include "Assets\floor.h"
-GLfloat ambi2[]   = {0.5, 0.5, 0.5, 0.5};
 static void draw_table_always(){
-
-	
-		
-	glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, ambi2);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
-    //glMatrixMode(GL_MODELVIEW);
-
 
 	//glClearColor(0,1,0,1);
     //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
