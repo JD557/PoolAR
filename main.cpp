@@ -1,5 +1,6 @@
 #ifdef _WIN32
 #include <windows.h>
+#else
 #include <GL/glew.h>
 #pragma comment(lib,"glew32.lib")
 #else
@@ -422,6 +423,9 @@ static void init( void )
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
 /* cleanup function called when program exits */
@@ -528,7 +532,7 @@ static void draw_table_always(){
 		glMultMatrixf(m);
 	
 		
-		if(false){
+		if(true){
 			
 			glColor3f(1.0,1.0,0.0);		
 			gluQuadricOrientation( glQ, GLU_INSIDE);
