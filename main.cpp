@@ -55,7 +55,7 @@ string vconf = "Data\\WDM_camera_flipV.xml";
 string cparam_name = "Data\\camera_para.dat";
 string config_name = "Data\\marker.dat";
 #else
-string vconf = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+string vconf = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 string cparam_name    = "Data/camera_para.dat";
 string config_name = "Data/marker.dat";
 #endif
@@ -89,7 +89,7 @@ static void   init(void);
 static void   cleanup(void);
 static void   keyEvent( unsigned char key, int x, int y);
 static void   mainLoop(void);
-static void   drawObject( double trans1[3][4], double trans2[3][4], size_t marker );
+static void   drawObject( double trans1[3][4], double trans2[3][4]);
 static void   draw_table_always();
 
 Model hole;
@@ -288,29 +288,30 @@ static void mainLoop(void)
 		int             marker_num;
 		double          err;
 
-   //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+   
 		if( (dataPtr = (ARUint8 *)arVideoGetImage()) == NULL ) {
-			//arUtilSleep(2);
 			dataPtr = dataPtr_copy;
-			//return;
 		}
 		else {
 			dataPtr_copy = dataPtr;
+			generateOverMask(dataPtr,dataPtr2,640,480,15,30);
+			glBindTexture(GL_TEXTURE_2D,videoTexture);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
+			glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, dataPtr2);
 		}
 		if( icount == 0 ) arUtilTimerReset();
 		icount++;
 
-			argDrawMode2D();
-	argDispImage( dataPtr, 0,0 );
-/*	
-	
+		argDrawMode2D();
+		argDispImage( dataPtr, 0,0 );
+
 		if( arDetectMarker(dataPtr, thresh, &marker_info, &marker_num) < 0 ) {
 			cleanup();
 			exit(0);
 		}
 		arVideoCapNext();
-		
+
 		if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
 			argSwapBuffers();
 			return;
@@ -326,15 +327,16 @@ static void mainLoop(void)
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
+		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	
-		for(int i = 0; i < config->marker_num; i++ ) {
+		/*for(int i = 0; i < config->marker_num; i++ ) {
 		   drawObject( config->trans, config->marker[i].trans, i );
-		}
+		}*/
+		drawObject( config->trans, config->marker[0].trans);
 
 		glDisable( GL_LIGHTING );
 		glDisable( GL_DEPTH_TEST );
 
-		generateOverMask(dataPtr,dataPtr2,640,480,15,30);
 		argDrawMode2D();
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_ALPHA);
@@ -344,7 +346,6 @@ static void mainLoop(void)
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, dataPtr2);
 		glEnable(GL_COLOR_MATERIAL);
 		int deltaY=240;
 		glBegin(GL_QUADS);
@@ -358,26 +359,9 @@ static void mainLoop(void)
 		glDisable(GL_ALPHA);
 		glDisable(GL_BLEND);
 	
-		
-		*/
-		glMatrixMode( GL_PROJECTION );
-		glLoadIdentity();	
-		glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 500.0 );
-		glMatrixMode( GL_MODELVIEW );
-		glLoadIdentity();
-		gluLookAt(tx,ty,tz,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
-		glEnable(GL_LIGHTING);
-    	glEnable(GL_LIGHT0);
-    	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    	glLightfv(GL_LIGHT0, GL_AMBIENT, ambi2);
-    	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
-		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-		draw_table_always();
-		glutSwapBuffers();
-		glFlush();
-
-		//argSwapBuffers();
-	} else {
+		argSwapBuffers();
+	}
+	else {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
@@ -450,7 +434,30 @@ static void cleanup(void)
     argCleanup();
 }
 
-static void drawObject( double trans1[3][4], double trans2[3][4], size_t marker )
+void renderHoles() {
+
+	glPushMatrix();
+	glTranslated(0.0,0.0,0.0);
+	hole.render();
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslated(74.92,0.0,0.0);
+	hole.render();
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslated(74.92,-118.47,0.0);
+	hole.render();
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslated(0.0,-118.47,0.0);
+	hole.render();
+	glPopMatrix();
+}
+
+static void drawObject( double trans1[3][4], double trans2[3][4])
 {
     
 	glMatrixMode(GL_MODELVIEW);
@@ -466,20 +473,35 @@ static void drawObject( double trans1[3][4], double trans2[3][4], size_t marker 
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor);
     glMatrixMode(GL_MODELVIEW);
 
-	
-	if (marker==0) {table.render();}
-
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glColorMask(0,0,0,0);
-	hole.render();
-	glCullFace(GL_FRONT);
+	renderHoles();
 	glColorMask(1,1,1,1);
-	hole.render();
+
+	table.render();
+
+	btScalar	m[16];
+	for(int i=0; i< world.getBalls().size(); ++i){
+		glPushMatrix();
+		btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
+		if(body&&body->getMotionState())
+		{
+			btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
+			myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+		}
+		glRotated(90,1,0,0);
+		glMultMatrixf(m);
+		ball.render();
+		glPopMatrix();
+	}
+
+	glCullFace(GL_FRONT);
+	renderHoles();
 	glCullFace(GL_BACK);
 	glDisable(GL_CULL_FACE);
-
 }
+
 static void draw_table_always(){
 
 	//glClearColor(0,1,0,1);
