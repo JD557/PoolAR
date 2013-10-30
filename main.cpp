@@ -45,7 +45,7 @@
 	#define CH3 r
 #endif
 
-#define MODEL_DEBUG true
+#define MODEL_DEBUG false
 
 //
 // Camera configuration.
@@ -63,7 +63,12 @@ string config_name = "Data/marker.dat";
 int             xsize, ysize;
 int             thresh = 100;
 int             icount = 0;
-int  DELTA_T = 15;
+
+int FRAME_RATE = 60;
+btScalar  TICK_RATE = 1.0/FRAME_RATE;
+int  DELTA_T = 1000.0/FRAME_RATE;
+
+
 GLUquadric* glQ;
 ARParam         cparam;
 //char                *config_name = "Data/multi/marker.dat";
@@ -271,7 +276,7 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 ARUint8 dataPtr2[640*480*4];
 
 
-
+ARUint8         *dataPtr_copy;
 /* main loop */
 static void mainLoop(void)
 {
@@ -282,23 +287,29 @@ static void mainLoop(void)
 		int             marker_num;
 		double          err;
 
-   
+   //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		if( (dataPtr = (ARUint8 *)arVideoGetImage()) == NULL ) {
-			arUtilSleep(2);
-			return;
+			//arUtilSleep(2);
+			dataPtr = dataPtr_copy;
+			//return;
+		}
+		else {
+			dataPtr_copy = dataPtr;
 		}
 		if( icount == 0 ) arUtilTimerReset();
 		icount++;
 
-		argDrawMode2D();
-		argDispImage( dataPtr, 0,0 );
-
+			argDrawMode2D();
+	argDispImage( dataPtr, 0,0 );
+/*	
+	
 		if( arDetectMarker(dataPtr, thresh, &marker_info, &marker_num) < 0 ) {
 			cleanup();
 			exit(0);
 		}
 		arVideoCapNext();
-
+		
 		if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
 			argSwapBuffers();
 			return;
@@ -346,7 +357,18 @@ static void mainLoop(void)
 		glDisable(GL_ALPHA);
 		glDisable(GL_BLEND);
 	
-		argSwapBuffers();
+		
+		*/
+		glMatrixMode( GL_PROJECTION );
+		glLoadIdentity();	
+		glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 500.0 );
+		gluLookAt(tx,ty,tz,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
+		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+		draw_table_always();
+		glutSwapBuffers();
+		glFlush();
+
+		//argSwapBuffers();
 	} else {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -396,7 +418,7 @@ static void init( void )
     argDrawMode     = AR_DRAW_BY_TEXTURE_MAPPING;
     argTexmapMode   = AR_DRAW_TEXTURE_HALF_IMAGE;
 	glQ = gluNewQuadric();
-	glutTimerFunc(DELTA_T, tick, 0);
+	glutTimerFunc(0, tick, 0);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -454,8 +476,8 @@ static void draw_table_always(){
     //glMatrixMode(GL_MODELVIEW);
 
 
-	glClearColor(0,1,0,1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glClearColor(0,1,0,1);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glTranslated(mx,my,mz);
 
@@ -507,7 +529,7 @@ static void draw_table_always(){
 	
 		
 		if(false){
-			glScaled(0.77,0.77,0.77);
+			
 			glColor3f(1.0,1.0,0.0);		
 			gluQuadricOrientation( glQ, GLU_INSIDE);
 			gluSphere(glQ, 4.53 ,20, 20);
@@ -535,6 +557,6 @@ static void draw_table_always(){
 }
 
 void tick(int a){
-	world.dynamicsWorld->stepSimulation((float)DELTA_T);
+	world.dynamicsWorld->stepSimulation(TICK_RATE);
 	glutTimerFunc(DELTA_T, tick, 0);
 }
