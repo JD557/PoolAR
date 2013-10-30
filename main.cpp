@@ -1,9 +1,12 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <GL/glew.h>
+#pragma comment(lib,"glew32.lib")
 #else
+#include <GL/glew.h>
 #include <GL/gl.h>
 #endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
@@ -109,9 +112,9 @@ void tick(int a);
 
 int main(int argc, char **argv)
 {
-
 	glutInit(&argc, argv);
 	init();
+	glewInit();
 
 	table = Model("Assets/pool.obj");
 	ball = Model("Assets/ball.obj");
@@ -394,6 +397,9 @@ static void init( void )
     argTexmapMode   = AR_DRAW_TEXTURE_HALF_IMAGE;
 	glQ = gluNewQuadric();
 	glutTimerFunc(DELTA_T, tick, 0);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
 /* cleanup function called when program exits */
@@ -453,8 +459,8 @@ static void draw_table_always(){
 
 	glTranslated(mx,my,mz);
 
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 	glColorMask(0,0,0,0);
 	hole.render();
 	glColorMask(1,1,1,1);
@@ -500,7 +506,7 @@ static void draw_table_always(){
 		glMultMatrixf(m);
 	
 		
-		if(true){
+		if(false){
 			glScaled(0.77,0.77,0.77);
 			glColor3f(1.0,1.0,0.0);		
 			gluQuadricOrientation( glQ, GLU_INSIDE);
