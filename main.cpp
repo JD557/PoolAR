@@ -215,8 +215,8 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 		}
 	}
 
-	//alphaGaussianBlur(dataOut,w,h);
-	alphaHisteresis(dataOut,w,h,100,150);
+	alphaGaussianBlur(dataOut,w,h);
+	alphaHisteresis(dataOut,w,h,125,150);
 	alphaDilate(dataOut,w,h);
 	alphaErode(dataOut,w,h);
 	alphaGaussianBlur(dataOut,w,h);
@@ -411,6 +411,17 @@ void renderHoles() {
 	glPopMatrix();
 
 	glPushMatrix();
+	glTranslated(0.0,-59.23,0.0);
+	hole.render();
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslated(74.92,-59.23,0.0);
+	hole.render();
+	glPopMatrix();
+
+
+	glPushMatrix();
 	glTranslated(74.92,-118.47,0.0);
 	hole.render();
 	glPopMatrix();
@@ -505,7 +516,11 @@ void loadModels() {
 	hole = newHole(25,6.15,6.15);
 }
 
+size_t lastTick = 0;
+
 void tick(int a){
-	world.dynamicsWorld->stepSimulation(TICK_RATE);
+	//world.dynamicsWorld->stepSimulation(TICK_RATE);
+	world.dynamicsWorld->stepSimulation((glutGet(GLUT_ELAPSED_TIME)-lastTick)/1000.0,7);
+	lastTick = glutGet(GLUT_ELAPSED_TIME);
 	glutTimerFunc(DELTA_T, tick, 0);
 }
