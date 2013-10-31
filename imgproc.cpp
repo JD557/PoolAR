@@ -1,4 +1,5 @@
 #include "imgproc.hpp"
+#include <omp.h>
 
 unsigned char *tempBuffer=NULL;
 size_t wAlloc = 0;
@@ -17,6 +18,7 @@ void alphaErode(unsigned char *data, int w, int h) {
 		tempBuffer=(unsigned char*)malloc(h*w);
 	}
 
+	#pragma omp parallel for shared(data, kernel, tempBuffer, w, h)
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
 			int pos=640*y+x;
@@ -57,6 +59,7 @@ void alphaDilate(unsigned char *data, int w, int h) {
 		tempBuffer=(unsigned char*)malloc(h*w);
 	}
 
+	#pragma omp parallel for shared(data, kernel, tempBuffer, w, h)
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
 			int pos=640*y+x;
@@ -130,6 +133,7 @@ void alphaGaussianBlur(unsigned char *data, int w, int h) {
 		if (tempBuffer!=NULL) {free(tempBuffer);}
 		tempBuffer=(unsigned char*)malloc(h*w);
 	}
+	#pragma omp parallel for shared(data, kernel, tempBuffer, w, h)
 	for (int y=0;y<h;++y) {
 		for (int x=0;x<w;++x) {			
 			size_t pos=640*y+x;
