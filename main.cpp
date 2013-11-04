@@ -214,12 +214,13 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 			dataOut[4*i+3]=alpha;
 		}
 	}
+	
 	downscaleAlpha(dataOut,w,h);
-	alphaGaussianBlur(dataOut,w,h);
-	alphaHisteresis(dataOut,w,h,125,150);
-	alphaDilate(dataOut,w,h);
-	alphaErode(dataOut,w,h);
-	upscaleAlpha(dataOut,w/2,h/2);
+	alphaGaussianBlur(dataOut,w/2,h/2);
+	alphaHisteresis(dataOut,w/2,h/2,125,150);
+	alphaDilate(dataOut,w/2,h/2);
+	alphaErode(dataOut,w/2,h/2);
+	upscaleAlpha(dataOut,w,h);
 	alphaGaussianBlur(dataOut,w,h);
 	//alphaHisteresis(dataOut,w,h,125,150);
 	/* ALPHA DEBUG */

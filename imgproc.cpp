@@ -14,15 +14,9 @@ void alloc(int w,int h) {
 }
 
 void downscaleAlpha(unsigned char *data, int w, int h) {
-	for (int y=0;y<h;y+=2) {
-		for (int x=0;x<w;x+=2) {
-			unsigned int accum =
-				data[4*(w*y+x)+3] +	
-				data[4*(w*y+x+1)+3] +
-				data[4*(w*(y+1)+x)+3] +
-				data[4*(w*(y+1)+x+1)+3];
-			accum = accum/4;
-			data[2*(w*y+x)+3]=accum;
+	for (int y=0;y<h;y++) {
+		for (int x=0;x<w;x++) {
+			data[4*(w/2*y+x/2)+3]=data[4*(w*y+x)+3];
 		}
 	}
 }
