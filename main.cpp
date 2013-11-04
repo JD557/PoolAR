@@ -55,7 +55,7 @@ string vconf       = "Data\\WDM_camera_flipV.xml";
 string cparam_name = "Data\\camera_para.dat";
 string config_name = "Data\\marker.dat";
 #else
-string vconf          = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+string vconf          = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 string cparam_name    = "Data/camera_para.dat";
 string config_name    = "Data/marker.dat";
 #endif
@@ -214,11 +214,12 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 			dataOut[4*i+3]=alpha;
 		}
 	}
-
+	downscaleAlpha(dataOut,w,h);
 	alphaGaussianBlur(dataOut,w,h);
 	alphaHisteresis(dataOut,w,h,125,150);
 	alphaDilate(dataOut,w,h);
 	alphaErode(dataOut,w,h);
+	upscaleAlpha(dataOut,w/2,h/2);
 	alphaGaussianBlur(dataOut,w,h);
 	//alphaHisteresis(dataOut,w,h,125,150);
 	/* ALPHA DEBUG */
@@ -253,18 +254,12 @@ void mainLoop(void)
 	icount++;
 	argDrawMode2D();
 	argDispImage( dataPtr, 0,0 );
-	if (needsUpdate) {
-		generateOverMask(dataPtr,overlayBuffer,640,480,15,30);
-		glBindTexture(GL_TEXTURE_2D,videoTexture);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, overlayBuffer);
-	}
 
 	if( arDetectMarker(dataPtr, thresh, &marker_info, &marker_num) < 0 ) {
 		cleanup();
 		exit(0);
 	}
+
 	arVideoCapNext();
 
 	if( (err=arMultiGetTransMat(marker_info, marker_num, config)) < 0 ) {
@@ -274,6 +269,14 @@ void mainLoop(void)
 	if(err > 100.0 ) {
 		argSwapBuffers();
 		return;
+	}
+
+	if (needsUpdate) {
+		generateOverMask(dataPtr,overlayBuffer,640,480,15,30);
+		glBindTexture(GL_TEXTURE_2D,videoTexture);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, overlayBuffer);
 	}
 
 	argDrawMode3D();
