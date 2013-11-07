@@ -241,5 +241,6 @@ void Physics::updateClub(float x, float y, float z){
 			newPivotB = rayFrom + dir;
 		}*/
 		pickCon->getFrameOffsetA().setOrigin(btVector3(x,y,z));
+		
 	}
 }

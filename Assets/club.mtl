@@ -1,0 +1,12 @@
+# Blender MTL File: 'None'
+# Material Count: 1
+
+newmtl Club
+Ns 84.313725
+Ka 0.000000 0.000000 0.000000
+Kd 0.390144 0.262144 0.262144
+Ks 0.600000 0.500000 0.500000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd C:\Users\Bruno\Desktop\club.jpg

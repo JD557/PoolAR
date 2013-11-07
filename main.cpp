@@ -45,7 +45,7 @@
 	#define CH3 r
 #endif
 
-#define MODEL_DEBUG 1
+#define MODEL_DEBUG 0
 
 //
 // Camera configuration.
@@ -59,6 +59,12 @@ string vconf          = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpeg
 string cparam_name    = "Data/camera_para.dat";
 string config_name    = "Data/marker.dat";
 #endif
+
+char           *club_path      = "Data\\club.pat";
+int             club_id;
+double          club_width     = 20.0;
+double          club_center[2] = {0.0, 0.0};
+double          club_trans[3][4];
 
 int xsize, ysize;
 int thresh = 100;
@@ -86,6 +92,7 @@ void loadModels();
 Model hole;
 Model table;
 Model ball;
+Model club;
 
 GLuint videoTexture;
 
@@ -125,7 +132,7 @@ int main(int argc, char **argv)
 	return (0);
 }
 
-
+double club_x=0,club_y=0,club_z=0;
 
 void   keyEvent( unsigned char key, int x, int y)
 {
@@ -155,6 +162,10 @@ void   keyEvent( unsigned char key, int x, int y)
 			world.getBalls()[0]->forceActivationState(1);
 			world.getBalls()[0]->setLinearVelocity(btVector3(1,0,1)*40);
 		break;
+		case 'o':club_x=20;club_y=20;club_z=20;;world.updateClub(club_x,club_y,club_z);break;
+		case 'k':club_x=10;club_y=10;club_z=10;;world.updateClub(club_x,club_y,club_z);break;
+		case 'l':--club_x;world.updateClub(club_x,club_y,club_z);break;
+		case 'ç':--club_z;world.updateClub(club_x,club_y,club_z);break;
     #if MODEL_DEBUG // MODEL DEBUG ONLY KEYS
         case '\\': // Change view mode
         	if(++VIEW_MODE==NR_VIEW_MODE) {VIEW_MODE=0;}
@@ -179,6 +190,10 @@ void   keyEvent( unsigned char key, int x, int y)
 		case 'v':printf("xxx: %f\n", --mx);break;
 		case 'b':printf("yyy: %f\n", --my);break;
 		case 'n':printf("zzz: %f\n", --mz);break;
+			case 'o':club_x+=20;world.updateClub(club_x,club_y,club_z);break;
+		case 'k':++club_z;world.updateClub(club_x,club_y,club_z);break;
+		case 'l':--club_x;world.updateClub(club_x,club_y,club_z);break;
+		case 'ç':--club_z;world.updateClub(club_x,club_y,club_z);break;
 	#endif
     }
 }
@@ -232,6 +247,65 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 
 }
 
+void print_arr(double arr[3][4]) {
+	for(int i=0;i< 3;++i) {
+		for(int j = 0; j< 4; ++j) {
+			printf("%f ", arr[i][j]);
+		}
+
+		printf("\n");
+	}
+	printf("\n");
+}
+
+void drawClub(double b1[3][4]){
+	
+	double mat1[3][4],mat2[3][4],mat3[3][4];
+
+	
+	printf("\n");
+	//print_arr(b2);
+
+	arUtilMatInv(b1, mat2);
+	arUtilMatMul(mat2, club_trans , mat1);
+
+    //arUtilMatInv(mat1, mat2);
+	arUtilMatInv(mat1,mat3);
+	//arUtilMatMul(club_trans, mat2 , mat1);
+	double x = mat3[0][3];
+	double y = mat3[1][3];
+	double z = mat3[2][3];
+    printf("%f %f %f\n",x,y, z);
+	print_arr(mat1);
+	world.updateClub(y,-z,x);
+	
+
+	btScalar	m[16];
+	glPushMatrix();
+	btRigidBody* body=btRigidBody::upcast(world.club);
+	if(body&&body->getMotionState())
+	{
+		btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
+		myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+		glRotated(90,1,0,0);
+			glMultMatrixf(m);
+		ball.render();
+	}
+	glPopMatrix();
+	printf("club: %f %f %f\n", world.club->getCenterOfMassPosition()[0],world.club->getCenterOfMassPosition()[1],world.club->getCenterOfMassPosition()[2]);
+	
+    //argConvGlpara(club_trans, gl_para);
+    //glLoadMatrixd( gl_para );
+
+	argConvGlpara(mat1, gl_para);
+	glMultMatrixd(gl_para);
+
+	glPushMatrix();
+	glRotated(-90,0,0,1);
+	club.render();
+	glPopMatrix();
+}
+
 /* main loop */
 void mainLoop(void)
 {
@@ -245,6 +319,7 @@ void mainLoop(void)
 
 
 	if( (dataPtr = (ARUint8 *)arVideoGetImage()) == NULL ) {
+		if(doubleBuffer==NULL) return;
 		dataPtr = doubleBuffer;
 	}
 	else {
@@ -272,6 +347,15 @@ void mainLoop(void)
 		return;
 	}
 
+	bool club_visible=false;
+	for(int i=0; i<marker_num; ++i){
+		if(marker_info[i].id==club_id){
+			arGetTransMat(&marker_info[i], club_center, club_width, club_trans);
+			club_visible=true;
+		}
+	}
+	
+
 	if (needsUpdate) {
 		generateOverMask(dataPtr,overlayBuffer,640,480,15,30);
 		glBindTexture(GL_TEXTURE_2D,videoTexture);
@@ -290,7 +374,10 @@ void mainLoop(void)
 	glEnable(GL_LIGHTING);
 
 	drawObject( config->trans, config->marker[0].trans, 0);
-	drawObject( config->trans, config->marker[0].trans, 1);
+	//drawObject( config->trans, config->marker[0].trans, 1);
+	drawClub(config->trans);
+	//if(club_visible) 
+
 	/*glDisable(GL_LIGHTING);
 	glDepthMask(GL_FALSE);
 	glEnable(GL_STENCIL_TEST);
@@ -331,7 +418,7 @@ void mainLoop(void)
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_ALPHA);
 	glDisable(GL_BLEND);
-
+	glDisable(GL_STENCIL_TEST);
 	argSwapBuffers();
 #else // Debug Mode
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -393,6 +480,7 @@ void mainLoop(void)
 	glDepthMask( GL_TRUE );
 	glutSwapBuffers();
 	glFlush();
+	glDisable(GL_STENCIL_TEST);
 #endif
 	
 }
@@ -420,6 +508,11 @@ void init( void )
 
     if( (config = arMultiReadConfigFile(config_name.c_str())) == NULL ) {
         printf("config data load error !!\n");
+        exit(0);
+    }
+
+	if( (club_id=arLoadPatt(club_path)) < 0 ) {
+        printf("pattern load error !!\n");
         exit(0);
     }
 
@@ -506,8 +599,8 @@ void drawObject( double trans1[3][4], double trans2[3][4], int renderMode)
 	glMatrixMode(GL_MODELVIEW);
     argConvGlpara(trans1, gl_para);
     glLoadMatrixd( gl_para );
-    argConvGlpara(trans2, gl_para);
-    glMultMatrixd( gl_para );
+    //argConvGlpara(trans2, gl_para);
+   // glMultMatrixd( gl_para );
 
     glEnable(GL_LIGHTING);
     mainLight.use();
@@ -609,6 +702,7 @@ void draw_table_always(int renderMode){
 void loadModels() {
 	table = Model("Assets/pool.obj");
 	ball = Model("Assets/ball.obj");
+	club = Model("Assets/club.obj");
 	hole = newHole(25,6.15,6.15);
 }
 
