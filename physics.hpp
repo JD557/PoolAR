@@ -14,14 +14,19 @@ class Physics {
 		btCollisionDispatcher* dispatcher;
 		btSequentialImpulseConstraintSolver* solver;
 		btDiscreteDynamicsWorld* dynamicsWorld;
-
+		btRigidBody* club;
 		btCollisionShape* ballShape;
 		btCollisionShape* groundShape;
-
+		btGeneric6DofConstraint* dof6;
 		std::vector<btRigidBody*> balls;
 
 		btRigidBody* createBall(int n);
 		void createFloor();
+
+		void initClub();
+
+		void updateClub(float x, float y, float z);
+		
 
 	public:
 		Physics();

@@ -44,12 +44,17 @@ Physics::Physics(){
 	
 	createFloor();
 	
-
+	initClub();
+	
 	//fallRigidBody->setLinearVelocity( btVector3(0,0,0) );
 	
 }
 
 Physics::~Physics(){
+	if(dof6!=NULL){
+		dynamicsWorld->removeConstraint(dof6);
+		delete dof6;
+	}
 	delete dynamicsWorld;
     delete solver;
     delete collisionConfiguration;
@@ -157,4 +162,84 @@ void Physics::createFloor(){
 	btRigidBody::btRigidBodyConstructionInfo rbInfo(massg,myMotionStatee,trimesh,localInertiaaa);
 	btRigidBody* body = new btRigidBody(rbInfo);
 	dynamicsWorld->addRigidBody(body);
+	body->setFriction(3.4f);
+}
+
+void Physics::initClub(){
+	btVector3 position = btVector3(10,1,10);
+	
+	btTransform transform;
+	transform.setIdentity();
+	transform.setOrigin(position);
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(transform);
+    btScalar mass = 0.5;
+    btVector3 localInertia(0,0,0);
+	ballShape->calculateLocalInertia(mass,localInertia);
+    btRigidBody::btRigidBodyConstructionInfo fallRigidBodyInfo(mass,myMotionState,ballShape,localInertia);
+    club = new btRigidBody(fallRigidBodyInfo);
+	club->setFriction(1.4f);
+	club->setRestitution(0.95f);
+	club->setDamping(0.2f,0.1f);
+	club->setRollingFriction(1.4f);
+
+	club->setActivationState(DISABLE_DEACTIVATION);
+	dynamicsWorld->addRigidBody(club);
+
+	btVector3 localPivot = club->getCenterOfMassTransform().inverse() * btVector3(0,0,0);
+
+	btTransform tr;
+	tr.setIdentity();
+	tr.setOrigin(localPivot);
+
+	dof6 = new btGeneric6DofConstraint(*club, tr,false);
+	dof6->setLinearLowerLimit(btVector3(0,0,0));
+	dof6->setLinearUpperLimit(btVector3(0,0,0));
+	dof6->setAngularLowerLimit(btVector3(0,0,0));
+	dof6->setAngularUpperLimit(btVector3(0,0,0));
+
+	dynamicsWorld->addConstraint(dof6,true);
+
+	dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,0);
+	dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,1);
+	dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,2);
+	dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,3);
+	dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,4);
+	dof6->setParam(BT_CONSTRAINT_STOP_CFM,0.8,5);
+
+	dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,0);
+	dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,1);
+	dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,2);
+	dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,3);
+	dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,4);
+	dof6->setParam(BT_CONSTRAINT_STOP_ERP,0.1,5);
+}
+
+void Physics::updateClub(float x, float y, float z){
+
+	btGeneric6DofConstraint* pickCon = static_cast<btGeneric6DofConstraint*>(dof6);
+	if (pickCon)
+	{
+		//keep it at the same picking distance
+		/*
+		btVector3 newRayTo = getRayTo(x,y);
+		btVector3 rayFrom;
+		btVector3 oldPivotInB = pickCon->getFrameOffsetA().getOrigin();
+
+		btVector3 newPivotB;
+		if (m_ortho)
+		{
+			newPivotB = oldPivotInB;
+			newPivotB.setX(newRayTo.getX());
+			newPivotB.setY(newRayTo.getY());
+		} else
+		{
+			rayFrom = m_cameraPosition;
+			btVector3 dir = newRayTo-rayFrom;
+			dir.normalize();
+			dir *= gOldPickingDist;
+
+			newPivotB = rayFrom + dir;
+		}*/
+		pickCon->getFrameOffsetA().setOrigin(btVector3(x,y,z));
+	}
 }
