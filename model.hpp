@@ -25,6 +25,7 @@ using namespace std;
 
 #define USING_VBO 1
 #define COMPARE_DELTA 0.025
+#define SHADOW_EXT 5
 
 struct VBO {
 	GLuint id;

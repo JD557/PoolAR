@@ -170,7 +170,7 @@ void Model::render() {
 void Model::renderShadow(Vec3d lightPos) {
 	GLfloat matrix[4][4];
 	glGetFloatv(GL_MODELVIEW_MATRIX, &(matrix[0][0]));
-	Vec3d newLightPos;
+	Vec3d newLightPos = lightPos;
 	newLightPos.x = lightPos.x*matrix[0][0] + lightPos.y*matrix[0][1] + lightPos.z*matrix[0][2] + matrix[0][3];
 	newLightPos.y = lightPos.x*matrix[1][0] + lightPos.y*matrix[1][1] + lightPos.z*matrix[1][2] + matrix[1][3];
 	newLightPos.z = lightPos.x*matrix[2][0] + lightPos.y*matrix[2][1] + lightPos.z*matrix[2][2] + matrix[2][3];
@@ -202,14 +202,35 @@ void Model::renderShadow(Vec3d lightPos) {
 		}
 	}
 
+	/*glBegin(GL_LINES);
+	for (size_t i=0;i<verticesA.size();++i) {
+		glVertex3f(newLightPos.x+5*(verticesA[i].x-newLightPos.x),
+		           newLightPos.y+5*(verticesA[i].y-newLightPos.y),
+		           newLightPos.z+5*(verticesA[i].z-newLightPos.z)
+		           );
+		glVertex3f(newLightPos.x,newLightPos.y,newLightPos.z);
+		glVertex3f(newLightPos.x+5*(verticesB[i].x-newLightPos.x),
+                   newLightPos.y+5*(verticesB[i].y-newLightPos.y),
+                   newLightPos.z+5*(verticesB[i].z-newLightPos.z)
+                   );
+		glVertex3f(newLightPos.x,newLightPos.y,newLightPos.z);
+	}
+	glEnd();*/
+
 	// Render shadow
 	//glColor3f(0.0,0.0,0.0);
 	glBegin(GL_QUADS);
 	for (size_t i=0;i<verticesA.size();++i) {
 		glVertex3f(verticesA[i].x,verticesA[i].y,verticesA[i].z);
 		glVertex3f(verticesB[i].x,verticesB[i].y,verticesB[i].z);
-		glVertex3f(verticesB[i].x-newLightPos.x,verticesB[i].y-newLightPos.y,verticesB[i].z-newLightPos.z);
-		glVertex3f(verticesA[i].x-newLightPos.x,verticesA[i].y-newLightPos.y,verticesA[i].z-newLightPos.z);
+		glVertex3f(newLightPos.x+SHADOW_EXT*(verticesB[i].x-newLightPos.x),
+                   newLightPos.y+SHADOW_EXT*(verticesB[i].y-newLightPos.y),
+                   newLightPos.z+SHADOW_EXT*(verticesB[i].z-newLightPos.z)
+                   );
+		glVertex3f(newLightPos.x+SHADOW_EXT*(verticesA[i].x-newLightPos.x),
+	               newLightPos.y+SHADOW_EXT*(verticesA[i].y-newLightPos.y),
+		           newLightPos.z+SHADOW_EXT*(verticesA[i].z-newLightPos.z)
+		           );
 	}
 	glEnd();
 }
