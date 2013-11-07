@@ -2,25 +2,19 @@
 #include "tiny_obj_loader.hpp"
 #include <cmath>
 #include <iostream>
+#include <utility>
 #include "stb_image.c"
 using namespace tinyobj;
 
 Texture::Texture(string filename) {
 		glEnable(GL_TEXTURE_2D);
-		//ilImage texture;
-		//texture.Load(filename.c_str());
 		id=0;
 		glGenTextures(1, &id);
 		glBindTexture(GL_TEXTURE_2D, id);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
-		//image=(unsigned char *)malloc(texture.Width()*texture.Height()*texture.Bpp());
 		int w, h, d;
 		image = stbi_load(filename.c_str(), &w, &h, &d, 4);
-		//for (size_t i=0;i<texture.Width()*texture.Height()*texture.Bpp();i++) {
-		//	image[i]=texture.GetData()[i];
-		//}
-		//glTexImage2D(GL_TEXTURE_2D, 0, texture.Bpp(), texture.Width(), texture.Height(), 0, texture.Format(), GL_UNSIGNED_BYTE, image);
 		glTexImage2D(GL_TEXTURE_2D, 0, 4, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	}
 Texture::Texture() {id=0;}
@@ -92,10 +86,14 @@ Model::Model(string filename) {
 				t.vertex[k].y=positions[index*3+1];
 				t.vertex[k].z=positions[index*3+2];
 			}
+			t.fNormal.x=(t.normal[0].x+t.normal[1].x+t.normal[2].x)/3;
+			t.fNormal.y=(t.normal[0].y+t.normal[1].y+t.normal[2].y)/3;
+			t.fNormal.z=(t.normal[0].z+t.normal[1].z+t.normal[2].z)/3;
 			tris.push_back(t);
 		}
 	}
 	generateVBOs();
+	generateEdges();
 }
 
 void Model::applyMaterial(string name) {
@@ -167,6 +165,53 @@ void Model::render() {
 		}
 		glEnd();
 	}
+}
+
+void Model::renderShadow(Vec3d lightPos) {
+	GLfloat matrix[4][4];
+	glGetFloatv(GL_MODELVIEW_MATRIX, &(matrix[0][0]));
+	Vec3d newLightPos;
+	newLightPos.x = lightPos.x*matrix[0][0] + lightPos.y*matrix[0][1] + lightPos.z*matrix[0][2] + matrix[0][3];
+	newLightPos.y = lightPos.x*matrix[1][0] + lightPos.y*matrix[1][1] + lightPos.z*matrix[1][2] + matrix[1][3];
+	newLightPos.z = lightPos.x*matrix[2][0] + lightPos.y*matrix[2][1] + lightPos.z*matrix[2][2] + matrix[2][3];
+
+	vector<Vec3d> verticesA;
+	vector<Vec3d> verticesB;
+	int count = 0;
+	for (size_t i=0;i<edges.size();++i) {
+		Vec3d norm1;
+		if (edges[i].vertF1==3) {
+			norm1 = tris[edges[i].poly1Index].fNormal;
+		}
+		Vec3d norm2;
+		if (edges[i].vertF2==3) {
+			norm2 = tris[edges[i].poly2Index].fNormal;
+		}
+		double dot1 = norm1*newLightPos;
+		double dot2 = norm2*newLightPos;
+		if (dot1*dot2<0) {
+			count++;
+			if (dot1>=0) {
+				verticesA.push_back(edges[i].vert1);
+				verticesB.push_back(edges[i].vert2);
+			}
+			else {
+				verticesA.push_back(edges[i].vert2);
+				verticesB.push_back(edges[i].vert1);
+			}
+		}
+	}
+
+	// Render shadow
+	//glColor3f(0.0,0.0,0.0);
+	glBegin(GL_QUADS);
+	for (size_t i=0;i<verticesA.size();++i) {
+		glVertex3f(verticesA[i].x,verticesA[i].y,verticesA[i].z);
+		glVertex3f(verticesB[i].x,verticesB[i].y,verticesB[i].z);
+		glVertex3f(verticesB[i].x-newLightPos.x,verticesB[i].y-newLightPos.y,verticesB[i].z-newLightPos.z);
+		glVertex3f(verticesA[i].x-newLightPos.x,verticesA[i].y-newLightPos.y,verticesA[i].z-newLightPos.z);
+	}
+	glEnd();
 }
 
 
@@ -260,6 +305,41 @@ void Model::generateVBOs() {
 	}
 }
 
+void Model::generateEdges() {
+	map< pair<Vec3d,Vec3d>,int > openEdges;
+
+	// TODO: ADICIONAR MAIS POLIGONOS
+	for (size_t i=0;i<tris.size();++i) {
+		for (size_t j=0;j<3;++j) {
+			Vec3d vert1=tris[i].vertex[j];
+			Vec3d vert2=tris[i].vertex[(j+1)%3];
+			if (openEdges.count(make_pair(vert1,vert2))) {
+				Edge e;
+				e.vert1=vert1;
+				e.vert2=vert2;
+				e.poly1Index=openEdges[make_pair(vert1,vert2)];
+				e.poly2Index=i;
+				e.vertF1=3;
+				e.vertF2=3;
+				edges.push_back(e);
+			}
+			else if (openEdges.count(make_pair(vert2,vert1))) {
+				Edge e;
+				e.vert1=vert2;
+				e.vert2=vert1;
+				e.poly1Index=openEdges[make_pair(vert2,vert1)];
+				e.poly2Index=i;
+				e.vertF1=3;
+				e.vertF2=3;
+				edges.push_back(e);
+			}
+			else {
+				openEdges[make_pair(vert2,vert1)]=i;
+			}
+		}
+	}
+}
+
 Model newHole(int sides,double radius,double depth) {
 	Model m;
 	Poly p;
@@ -303,5 +383,6 @@ Model newHole(int sides,double radius,double depth) {
 	mat.shininess[0] = 0.5;
 	m.addMaterial(mat);
 	m.generateVBOs();
+	m.generateEdges();
 	return m;
 }
