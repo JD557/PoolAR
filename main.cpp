@@ -291,23 +291,6 @@ void mainLoop(void)
 
 	drawObject( config->trans, config->marker[0].trans, 0);
 	drawObject( config->trans, config->marker[0].trans, 1);
-	/*glDisable(GL_LIGHTING);
-	glDepthMask(GL_FALSE);
-	glEnable(GL_STENCIL_TEST);
-	glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE);
-	glStencilFunc(GL_ALWAYS,1,0xFFFFFFFFL);
-	glFrontFace(GL_CCW);
-	glStencilOp(GL_KEEP,GL_KEEP,GL_INCR);
-	drawObject( config->trans, config->marker[0].trans, 1);
-	glFrontFace(GL_CW);
-	glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
-	drawObject( config->trans, config->marker[0].trans, 1);*/
-	/*glFrontFace(GL_CCW);
-	glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
-	glStencilFunc( GL_NOTEQUAL, 0, 0xFFFFFFFFL );
-	glStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
-	glDisable(GL_LIGHTING);
-	drawObject( config->trans, config->marker[0].trans, 0);*/
 
 	glDisable( GL_LIGHTING );
 	glDisable( GL_DEPTH_TEST );
@@ -352,7 +335,7 @@ void mainLoop(void)
 	glPopMatrix();
 
 	/*glPushMatrix();
-	glCullFace(GL_FRONT);
+	//glCullFace(GL_FRONT);
 	draw_table_always(1);
 	glPopMatrix();*/
 
@@ -443,7 +426,8 @@ void init( void )
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
 	// Setup Lights
-	mainLight.setPosition(100.0,-200.0,200.0);
+	//mainLight.setPosition(100.0,-200.0,200.0);
+	mainLight.setPosition(10.0,-20.0,20.0);
 	mainLight.setAmbient(0.1, 0.1, 0.1);
 	mainLight.setColor(0.9, 0.9, 0.9);
 
@@ -503,44 +487,72 @@ void renderHoles() {
 void drawObject( double trans1[3][4], double trans2[3][4], int renderMode)
 {
     
-	glMatrixMode(GL_MODELVIEW);
-    argConvGlpara(trans1, gl_para);
-    glLoadMatrixd( gl_para );
-    argConvGlpara(trans2, gl_para);
-    glMultMatrixd( gl_para );
+    if (renderMode==0) {
+		glMatrixMode(GL_MODELVIEW);
+	    argConvGlpara(trans1, gl_para);
+	    glLoadMatrixd( gl_para );
+	    argConvGlpara(trans2, gl_para);
+	    glMultMatrixd( gl_para );
 
-    glEnable(GL_LIGHTING);
-    mainLight.use();
+	    glEnable(GL_LIGHTING);
+	    mainLight.use();
 
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	if (renderMode==0) {
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
 		glColorMask(0,0,0,0);
 		renderHoles();
 		glColorMask(1,1,1,1);
-	}
 
-	renderMode==1?table.renderShadow(mainLight.getPos()):table.render();
+		table.render();
 
-	btScalar	m[16];
-	for(int i=0; i< world.getBalls().size(); ++i){
-		glPushMatrix();
-		btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
-		if(body&&body->getMotionState())
-		{
-			btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
-			myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+		btScalar	m[16];
+		for(int i=0; i< world.getBalls().size(); ++i){
+			glPushMatrix();
+			btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
+			if(body&&body->getMotionState())
+			{
+				btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
+				myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+			}
+			glRotated(90,1,0,0);
+			glMultMatrixf(m);
+			ball.render();
+			glPopMatrix();
 		}
-		glRotated(90,1,0,0);
-		glMultMatrixf(m);
-		renderMode==1?ball.renderShadow(mainLight.getPos()):ball.render();
-		glPopMatrix();
-	}
 
-	glCullFace(GL_FRONT);
-	renderHoles();
-	glCullFace(GL_BACK);
-	glDisable(GL_CULL_FACE);
+		glCullFace(GL_FRONT);
+		renderHoles();
+		glCullFace(GL_BACK);
+		glDisable(GL_CULL_FACE);
+	}
+	else if (renderMode==1) {
+		glMatrixMode(GL_MODELVIEW);
+	    argConvGlpara(trans1, gl_para);
+	    glLoadMatrixd( gl_para );
+	    argConvGlpara(trans2, gl_para);
+	    glMultMatrixd( gl_para );
+
+	    glDisable(GL_LIGHTING);
+
+		glEnable(GL_CULL_FACE);
+
+		table.renderShadow(mainLight.getPos());
+
+		btScalar	m[16];
+		for(int i=0; i< world.getBalls().size(); ++i){
+			glPushMatrix();
+			btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
+			if(body&&body->getMotionState())
+			{
+				btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
+				myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+			}
+			glRotated(90,1,0,0);
+			glMultMatrixf(m);
+			ball.renderShadow(mainLight.getPos());
+			glPopMatrix();
+		}
+	}
 }
 
 #if MODEL_DEBUG
