@@ -7,6 +7,7 @@
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glut.h>
+#include "model.hpp"
 
 class Light {
 	private:
@@ -21,6 +22,7 @@ class Light {
 		void setAmbient(float r, float g, float b);
 		void setColor(float r, float g, float b);
 		void use();
+		Vec3d getPos();
 };
 
 #endif

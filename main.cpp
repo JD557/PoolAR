@@ -45,7 +45,7 @@
 	#define CH3 r
 #endif
 
-#define MODEL_DEBUG 0
+#define MODEL_DEBUG 1
 
 //
 // Camera configuration.
@@ -79,7 +79,7 @@ void init(void);
 void cleanup(void);
 void keyEvent( unsigned char key, int x, int y);
 void mainLoop(void);
-void drawObject( double trans1[3][4], double trans2[3][4]);
+void drawObject( double trans1[3][4], double trans2[3][4], int renderMode);
 void tick(int a);
 void loadModels();
 
@@ -98,7 +98,7 @@ ARUint8 *doubleBuffer;
 
 //mode debug
 #if MODEL_DEBUG
-void draw_table_always();
+void draw_table_always(int renderMode);
 float xy_aspect = (float)640 / (float)720;
 double cam_up_vec[] = { 0 , 1 , 0};
 int VIEW_MODE=0, NR_VIEW_MODE=2;
@@ -283,12 +283,31 @@ void mainLoop(void)
 	argDrawMode3D();
 	argDraw3dCamera( 0, 0 );
 	glClearDepth( 1.0 );
-	glClear(GL_DEPTH_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_LIGHTING);
 
-	drawObject( config->trans, config->marker[0].trans);
+	drawObject( config->trans, config->marker[0].trans, 0);
+	drawObject( config->trans, config->marker[0].trans, 1);
+	/*glDisable(GL_LIGHTING);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_STENCIL_TEST);
+	glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE);
+	glStencilFunc(GL_ALWAYS,1,0xFFFFFFFFL);
+	glFrontFace(GL_CCW);
+	glStencilOp(GL_KEEP,GL_KEEP,GL_INCR);
+	drawObject( config->trans, config->marker[0].trans, 1);
+	glFrontFace(GL_CW);
+	glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
+	drawObject( config->trans, config->marker[0].trans, 1);*/
+	/*glFrontFace(GL_CCW);
+	glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+	glStencilFunc( GL_NOTEQUAL, 0, 0xFFFFFFFFL );
+	glStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
+	glDisable(GL_LIGHTING);
+	drawObject( config->trans, config->marker[0].trans, 0);*/
 
 	glDisable( GL_LIGHTING );
 	glDisable( GL_DEPTH_TEST );
@@ -315,7 +334,7 @@ void mainLoop(void)
 
 	argSwapBuffers();
 #else // Debug Mode
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();	
@@ -326,7 +345,52 @@ void mainLoop(void)
 	glEnable(GL_LIGHTING);
 	mainLight.use();
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	draw_table_always();
+	glPushMatrix();
+	glDisable(GL_STENCIL_TEST);
+	glCullFace(GL_FRONT);
+	draw_table_always(0);
+	glPopMatrix();
+
+	/*glPushMatrix();
+	glCullFace(GL_FRONT);
+	draw_table_always(1);
+	glPopMatrix();*/
+
+	glEnable(GL_STENCIL_TEST);
+	glEnable(GL_CULL_FACE);
+	glColorMask(0,0,0,0);
+	glStencilFunc(GL_ALWAYS,0,0xFFFFFFFFL);
+	glDepthMask( GL_FALSE );
+	glStencilOp(GL_KEEP,GL_KEEP,GL_INCR);
+	glCullFace(GL_BACK);
+	glPushMatrix();
+	draw_table_always(1);
+	glPopMatrix();
+	glCullFace(GL_FRONT);
+	glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
+	glPushMatrix();
+	draw_table_always(1);
+	glPopMatrix();
+	glColorMask(1,1,1,1);
+	glStencilFunc( GL_NOTEQUAL, 0, 0xFFFFFFFFL );
+	glStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
+
+   	glPushMatrix();
+    glLoadIdentity();
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_LIGHTING);
+    glColor4f(0.0,0.0,0.0,0.5);
+    glEnable(GL_BLEND);
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glBegin( GL_TRIANGLE_STRIP );
+        glVertex3f(-0.1f, 0.1f,-0.10f);
+        glVertex3f(-0.1f,-0.1f,-0.10f);
+        glVertex3f( 0.1f, 0.1f,-0.10f);
+        glVertex3f( 0.1f,-0.1f,-0.10f);
+    glEnd();
+    glDisable(GL_BLEND);
+    glPopMatrix();
+	glDepthMask( GL_TRUE );
 	glutSwapBuffers();
 	glFlush();
 #endif
@@ -369,7 +433,7 @@ void init( void )
     // Setup Physics
 	glutTimerFunc(0, tick, 0);
 
-	// Seutp VBOs
+	// Setup VBOs
 	glewInit();
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
@@ -436,7 +500,7 @@ void renderHoles() {
 	glPopMatrix();
 }
 
-void drawObject( double trans1[3][4], double trans2[3][4])
+void drawObject( double trans1[3][4], double trans2[3][4], int renderMode)
 {
     
 	glMatrixMode(GL_MODELVIEW);
@@ -450,11 +514,13 @@ void drawObject( double trans1[3][4], double trans2[3][4])
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	glColorMask(0,0,0,0);
-	renderHoles();
-	glColorMask(1,1,1,1);
+	if (renderMode==0) {
+		glColorMask(0,0,0,0);
+		renderHoles();
+		glColorMask(1,1,1,1);
+	}
 
-	table.render();
+	renderMode==1?table.renderShadow(mainLight.getPos()):table.render();
 
 	btScalar	m[16];
 	for(int i=0; i< world.getBalls().size(); ++i){
@@ -467,7 +533,7 @@ void drawObject( double trans1[3][4], double trans2[3][4])
 		}
 		glRotated(90,1,0,0);
 		glMultMatrixf(m);
-		ball.render();
+		renderMode==1?ball.renderShadow(mainLight.getPos()):ball.render();
 		glPopMatrix();
 	}
 
@@ -478,39 +544,65 @@ void drawObject( double trans1[3][4], double trans2[3][4])
 }
 
 #if MODEL_DEBUG
-void draw_table_always(){
+void draw_table_always(int renderMode){
 
-	glTranslated(mx,my,mz);
+	if (renderMode==0) {
+		glTranslated(mx,my,mz);
 
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glColorMask(0,0,0,0);
-	hole.render();
-	glColorMask(1,1,1,1);
-	table.render();
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glColorMask(0,0,0,0);
+		hole.render();
+		glColorMask(1,1,1,1);
+		table.render();
 
-	btScalar	m[16];
-	
-	for(int i=0; i< world.getBalls().size(); ++i){
-		glPushMatrix();
+		btScalar	m[16];
+		
+		for(int i=0; i< world.getBalls().size(); ++i){
+			glPushMatrix();
 
-		btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
-		if(body&&body->getMotionState())
-		{
-			btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
-			myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+			btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
+			if(body&&body->getMotionState())
+			{
+				btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
+				myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+			}
+		
+			glRotated(90,1,0,0);
+			glMultMatrixf(m);
+		
+			ball.render();
+			glPopMatrix();
 		}
-	
-		glRotated(90,1,0,0);
-		glMultMatrixf(m);
-	
-		ball.render();
-		glPopMatrix();
+		glCullFace(GL_FRONT);
+		hole.render();
+		glCullFace(GL_BACK);
+		glDisable(GL_CULL_FACE);
 	}
-	glCullFace(GL_FRONT);
-	hole.render();
-	glCullFace(GL_BACK);
-	glDisable(GL_CULL_FACE);
+	else if (renderMode==1) {
+		glTranslated(mx,my,mz);
+
+		//table.renderShadow(mainLight.getPos());
+
+		btScalar	m[16];
+		
+		for(int i=0; i< world.getBalls().size(); ++i){
+			glPushMatrix();
+
+			btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
+			if(body&&body->getMotionState())
+			{
+				btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
+				myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
+			}
+		
+			glRotated(90,1,0,0);
+			glMultMatrixf(m);
+		
+			ball.renderShadow(mainLight.getPos());
+			glPopMatrix();
+		}
+	}
 }
 #endif
 

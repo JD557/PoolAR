@@ -19,9 +19,12 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cmath>
+#include "bullet/include/btBulletDynamicsCommon.h"
 using namespace std;
 
 #define USING_VBO 1
+#define COMPARE_DELTA 0.025
 
 struct VBO {
 	GLuint id;
@@ -45,12 +48,32 @@ struct Vec3d {
 	Vec3d(double x=0.0,double y=0.0,double z=0.0) {
 		this->x=x;this->y=y;this->z=z;
 	}
+	bool operator== (const Vec3d &b) const {
+		return fabs(this->x-b.x)<COMPARE_DELTA && fabs(this->y-b.y)<COMPARE_DELTA && fabs(this->z-b.z)<COMPARE_DELTA;
+	}
+	double operator* (Vec3d b) {
+		return this->x*b.x + this->y*b.y + this->z*b.z;
+	}
+	bool operator< (const Vec3d &b) const {
+		if (this->x == b.x) {
+			if (this->y == b.y) {
+				if (this->z == b.z) {
+					return false;
+				}
+				return this->z < b.z;
+			}
+			return this->y < b.y;
+		}
+		return this->x < b.x;
+	}
 };
+
 
 struct Tri {
 	Vec3d vertex[3];
 	Vec3d normal[3];
 	Vec3d uvw[3];
+	Vec3d fNormal;
 	string material;
 };
 
@@ -58,6 +81,7 @@ struct Quad {
 	Vec3d vertex[4];
 	Vec3d normal[4];
 	Vec3d uvw[4];
+	Vec3d fNormal;
 	string material;
 };
 
@@ -65,7 +89,19 @@ struct Poly {
 	vector<Vec3d> vertex;
 	vector<Vec3d> normal;
 	vector<Vec3d> uvw;
+	Vec3d fNormal;
 	string material;
+};
+
+struct Edge
+{
+	Vec3d vert1;
+	Vec3d vert2;
+	size_t poly1Index;
+	size_t poly2Index;
+	
+	int vertF1;
+	int vertF2;
 };
 
 struct Material {
@@ -102,18 +138,21 @@ class Model {
 		vector<Tri> tris;
 		vector<Quad> quads;
 		vector<Poly> polys;
+		vector<Edge> edges;
 		vector<VBO> vbos;
 	public:
 		Model();
 		Model(string filename);
 		void applyMaterial(string name);
 		void render();
+		void renderShadow(Vec3d lightPos);
 		void addMaterial(Material m);
 		void addMaterial(string name, Material m);
 		void addTri(Tri t);
 		void addQuad(Quad q);
 		void addPoly(Poly p);
 		void generateVBOs();
+		void generateEdges();
 };
 
 Model newHole(int sides,double radius,double depth);
