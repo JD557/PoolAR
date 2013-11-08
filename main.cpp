@@ -45,7 +45,7 @@
 	#define CH3 r
 #endif
 
-#define MODEL_DEBUG 0
+#define MODEL_DEBUG 1
 
 //
 // Camera configuration.
@@ -54,13 +54,14 @@
 string vconf       = "Data\\WDM_camera_flipV.xml";
 string cparam_name = "Data\\camera_para.dat";
 string config_name = "Data\\marker.dat";
+char *club_path      = "Data\\club.pat";
 #else
 string vconf          = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 string cparam_name    = "Data/camera_para.dat";
 string config_name    = "Data/marker.dat";
+char *club_path       = "Data/club.pat";
 #endif
 
-char           *club_path      = "Data\\club.pat";
 int             club_id;
 double          club_width     = 20.0;
 double          club_center[2] = {0.0, 0.0};
@@ -190,10 +191,10 @@ void   keyEvent( unsigned char key, int x, int y)
 		case 'v':printf("xxx: %f\n", --mx);break;
 		case 'b':printf("yyy: %f\n", --my);break;
 		case 'n':printf("zzz: %f\n", --mz);break;
-			case 'o':club_x+=20;world.updateClub(club_x,club_y,club_z);break;
+		/*case 'o':club_x+=20;world.updateClub(club_x,club_y,club_z);break;
 		case 'k':++club_z;world.updateClub(club_x,club_y,club_z);break;
 		case 'l':--club_x;world.updateClub(club_x,club_y,club_z);break;
-		case 'ç':--club_z;world.updateClub(club_x,club_y,club_z);break;
+		case 'ç':--club_z;world.updateClub(club_x,club_y,club_z);break;*/
 	#endif
     }
 }
@@ -414,8 +415,13 @@ void mainLoop(void)
 	gluLookAt(tx,ty,tz,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
 	glEnable(GL_LIGHTING);
 	mainLight.use();
+	glPointSize(10.0);
+	glBegin(GL_POINTS);
+		glVertex3f(mainLight.getPos().x,mainLight.getPos().y,mainLight.getPos().z);
+	glEnd();
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glPushMatrix();
+	glGetFloatv(GL_MODELVIEW_MATRIX, Model::cameraMatrix);
 	glDisable(GL_STENCIL_TEST);
 	glCullFace(GL_FRONT);
 	draw_table_always(0);
