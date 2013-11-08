@@ -155,6 +155,7 @@ class Model {
 		void applyMaterial(string name);
 		void render();
 		void renderShadow(Vec3d lightPos);
+		Material getMaterial(string name);
 		void addMaterial(Material m);
 		void addMaterial(string name, Material m);
 		void addTri(Tri t);

@@ -18,6 +18,7 @@
 #include <AR/ar.h>
 #include <AR/arMulti.h>
 #include <cmath>
+#include <sstream>
 #include "model.hpp"
 #include "physics.hpp"
 #include "imgproc.hpp"
@@ -92,6 +93,7 @@ void loadModels();
 Model hole;
 Model table;
 Model ball;
+Model balls[16];
 Model club;
 
 GLuint videoTexture;
@@ -296,7 +298,7 @@ void drawClub(double b1[3][4]){
 
 		if(z<0)z=0;
 			
-		printf("%f %f %f\n",x,y, z);
+		//printf("%f %f %f\n",x,y, z);
 	glPopMatrix();
 
 	world.updateClub(x,z,-y);
@@ -693,7 +695,7 @@ void drawObject( double trans1[3][4], double trans2[3][4], int renderMode)
 			}
 			glRotated(90,1,0,0);
 			glMultMatrixf(m);
-			ball.render();
+			balls[i].render();
 			glPopMatrix();
 		}
 
@@ -755,7 +757,7 @@ void draw_table_always(int renderMode){
 			glRotated(90,1,0,0);
 			glMultMatrixf(m);
 		
-			ball.render();
+			balls[i].render();
 			glPopMatrix();
 		}
 		glCullFace(GL_FRONT);
@@ -793,6 +795,14 @@ void draw_table_always(int renderMode){
 void loadModels() {
 	table = Model("Assets/pool.obj");
 	ball = Model("Assets/ball.obj");
+	for (int i=0;i<16;++i) {
+		balls[i] = Model("Assets/ball.obj");
+		Material m = balls[i].getMaterial("Material.001");
+		stringstream texture;
+		texture << "Assets/ball" << i+1 << ".jpg";
+		m.texture=Texture(texture.str());
+		balls[i].addMaterial("Material.001",m);
+	}
 	club = Model("Assets/club.obj");
 	hole = newHole(25,6.15,6.15);
 }

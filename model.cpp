@@ -375,7 +375,9 @@ void Model::renderShadow(Vec3d lightPos) {
 	glEnd();
 }
 
-
+Material Model::getMaterial(string name) {
+	return materials[name];
+}
 void Model::addMaterial(Material m) {
 	materials["default"]=m;
 }
