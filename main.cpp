@@ -404,16 +404,20 @@ void mainLoop(void)
     glLoadMatrixd( gl_para );
 
     glGetFloatv(GL_MODELVIEW_MATRIX, Model::cameraMatrix);
+	
 
-	// RENDER SCENE
-	glPushMatrix();
-	drawObject( config->trans, config->marker[0].trans, 0);
-	glPopMatrix();
+	//CLUB
 	if(club_visible) {
 		glPushMatrix();
 		drawClub(config->trans);
 		glPopMatrix();
 	}
+
+	// RENDER SCENE
+	glPushMatrix();
+	drawObject( config->trans, config->marker[0].trans, 0);
+	glPopMatrix();
+	
 
 	// RENDER SHADOWS
 
