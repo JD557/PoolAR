@@ -301,7 +301,7 @@ void drawClub(double b1[3][4]){
 
 	world.updateClub(x,z,-y);
 	//world.updateClub(x,y,z);
-
+	/*
 	btScalar	m[16];
 	glPushMatrix();
 	btRigidBody* body=btRigidBody::upcast(world.club);
@@ -315,7 +315,7 @@ void drawClub(double b1[3][4]){
 	}
 	glPopMatrix();
 	printf("club: %f %f %f\n", world.club->getCenterOfMassPosition()[0],world.club->getCenterOfMassPosition()[1],world.club->getCenterOfMassPosition()[2]);
-	
+	*/
     //argConvGlpara(club_trans, gl_para);
     //glLoadMatrixd( gl_para );
 
