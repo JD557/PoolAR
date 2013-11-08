@@ -67,6 +67,14 @@ struct Vec3d {
 		}
 		return this->x < b.x;
 	}
+	Vec3d transform(GLfloat *M) const {
+		GLfloat res[4];
+	    res[0]=M[ 0]*this->x+M[ 4]*this->y+M[ 8]*this->z+M[12]*1;
+	    res[1]=M[ 1]*this->x+M[ 5]*this->y+M[ 9]*this->z+M[13]*1;
+	    res[2]=M[ 2]*this->x+M[ 6]*this->y+M[10]*this->z+M[14]*1;
+	    //res[3]=M[ 3]*v[0]+M[ 7]*v[1]+M[11]*v[2]+M[15]*v[3];
+	    return Vec3d(res[0],res[1],res[2]);
+	}
 };
 
 
@@ -154,6 +162,7 @@ class Model {
 		void addPoly(Poly p);
 		void generateVBOs();
 		void generateEdges();
+		static float cameraMatrix[16];
 };
 
 Model newHole(int sides,double radius,double depth);

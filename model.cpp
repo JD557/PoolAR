@@ -6,6 +6,9 @@
 #include "stb_image.c"
 using namespace tinyobj;
 
+
+float Model::cameraMatrix[16];
+
 Texture::Texture(string filename) {
 		glEnable(GL_TEXTURE_2D);
 		id=0;
@@ -167,13 +170,142 @@ void Model::render() {
 	}
 }
 
+bool gluInvertMatrix(float* m, float* invOut)
+{
+    double inv[16], det;
+    int i;
+
+    inv[0] = m[5]  * m[10] * m[15] - 
+             m[5]  * m[11] * m[14] - 
+             m[9]  * m[6]  * m[15] + 
+             m[9]  * m[7]  * m[14] +
+             m[13] * m[6]  * m[11] - 
+             m[13] * m[7]  * m[10];
+
+    inv[4] = -m[4]  * m[10] * m[15] + 
+              m[4]  * m[11] * m[14] + 
+              m[8]  * m[6]  * m[15] - 
+              m[8]  * m[7]  * m[14] - 
+              m[12] * m[6]  * m[11] + 
+              m[12] * m[7]  * m[10];
+
+    inv[8] = m[4]  * m[9] * m[15] - 
+             m[4]  * m[11] * m[13] - 
+             m[8]  * m[5] * m[15] + 
+             m[8]  * m[7] * m[13] + 
+             m[12] * m[5] * m[11] - 
+             m[12] * m[7] * m[9];
+
+    inv[12] = -m[4]  * m[9] * m[14] + 
+               m[4]  * m[10] * m[13] +
+               m[8]  * m[5] * m[14] - 
+               m[8]  * m[6] * m[13] - 
+               m[12] * m[5] * m[10] + 
+               m[12] * m[6] * m[9];
+
+    inv[1] = -m[1]  * m[10] * m[15] + 
+              m[1]  * m[11] * m[14] + 
+              m[9]  * m[2] * m[15] - 
+              m[9]  * m[3] * m[14] - 
+              m[13] * m[2] * m[11] + 
+              m[13] * m[3] * m[10];
+
+    inv[5] = m[0]  * m[10] * m[15] - 
+             m[0]  * m[11] * m[14] - 
+             m[8]  * m[2] * m[15] + 
+             m[8]  * m[3] * m[14] + 
+             m[12] * m[2] * m[11] - 
+             m[12] * m[3] * m[10];
+
+    inv[9] = -m[0]  * m[9] * m[15] + 
+              m[0]  * m[11] * m[13] + 
+              m[8]  * m[1] * m[15] - 
+              m[8]  * m[3] * m[13] - 
+              m[12] * m[1] * m[11] + 
+              m[12] * m[3] * m[9];
+
+    inv[13] = m[0]  * m[9] * m[14] - 
+              m[0]  * m[10] * m[13] - 
+              m[8]  * m[1] * m[14] + 
+              m[8]  * m[2] * m[13] + 
+              m[12] * m[1] * m[10] - 
+              m[12] * m[2] * m[9];
+
+    inv[2] = m[1]  * m[6] * m[15] - 
+             m[1]  * m[7] * m[14] - 
+             m[5]  * m[2] * m[15] + 
+             m[5]  * m[3] * m[14] + 
+             m[13] * m[2] * m[7] - 
+             m[13] * m[3] * m[6];
+
+    inv[6] = -m[0]  * m[6] * m[15] + 
+              m[0]  * m[7] * m[14] + 
+              m[4]  * m[2] * m[15] - 
+              m[4]  * m[3] * m[14] - 
+              m[12] * m[2] * m[7] + 
+              m[12] * m[3] * m[6];
+
+    inv[10] = m[0]  * m[5] * m[15] - 
+              m[0]  * m[7] * m[13] - 
+              m[4]  * m[1] * m[15] + 
+              m[4]  * m[3] * m[13] + 
+              m[12] * m[1] * m[7] - 
+              m[12] * m[3] * m[5];
+
+    inv[14] = -m[0]  * m[5] * m[14] + 
+               m[0]  * m[6] * m[13] + 
+               m[4]  * m[1] * m[14] - 
+               m[4]  * m[2] * m[13] - 
+               m[12] * m[1] * m[6] + 
+               m[12] * m[2] * m[5];
+
+    inv[3] = -m[1] * m[6] * m[11] + 
+              m[1] * m[7] * m[10] + 
+              m[5] * m[2] * m[11] - 
+              m[5] * m[3] * m[10] - 
+              m[9] * m[2] * m[7] + 
+              m[9] * m[3] * m[6];
+
+    inv[7] = m[0] * m[6] * m[11] - 
+             m[0] * m[7] * m[10] - 
+             m[4] * m[2] * m[11] + 
+             m[4] * m[3] * m[10] + 
+             m[8] * m[2] * m[7] - 
+             m[8] * m[3] * m[6];
+
+    inv[11] = -m[0] * m[5] * m[11] + 
+               m[0] * m[7] * m[9] + 
+               m[4] * m[1] * m[11] - 
+               m[4] * m[3] * m[9] - 
+               m[8] * m[1] * m[7] + 
+               m[8] * m[3] * m[5];
+
+    inv[15] = m[0] * m[5] * m[10] - 
+              m[0] * m[6] * m[9] - 
+              m[4] * m[1] * m[10] + 
+              m[4] * m[2] * m[9] + 
+              m[8] * m[1] * m[6] - 
+              m[8] * m[2] * m[5];
+
+    det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+
+    if (det == 0)
+        return false;
+
+    det = 1.0 / det;
+
+    for (i = 0; i < 16; i++)
+        invOut[i] = inv[i] * det;
+
+    return true;
+}
+
 void Model::renderShadow(Vec3d lightPos) {
-	GLfloat matrix[4][4];
-	glGetFloatv(GL_MODELVIEW_MATRIX, &(matrix[0][0]));
+	GLfloat matrix[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, matrix);
+	gluInvertMatrix(matrix,matrix);
 	Vec3d newLightPos = lightPos;
-	newLightPos.x = lightPos.x*matrix[0][0] + lightPos.y*matrix[0][1] + lightPos.z*matrix[0][2] + matrix[0][3];
-	newLightPos.y = lightPos.x*matrix[1][0] + lightPos.y*matrix[1][1] + lightPos.z*matrix[1][2] + matrix[1][3];
-	newLightPos.z = lightPos.x*matrix[2][0] + lightPos.y*matrix[2][1] + lightPos.z*matrix[2][2] + matrix[2][3];
+	newLightPos = newLightPos.transform(cameraMatrix).transform(matrix);
 
 	vector<Vec3d> verticesA;
 	vector<Vec3d> verticesB;
@@ -191,16 +323,25 @@ void Model::renderShadow(Vec3d lightPos) {
 		double dot2 = norm2*newLightPos;
 		if (dot1*dot2<0) {
 			count++;
+			Vec3d vert1 = edges[i].vert1;
+			Vec3d vert2 = edges[i].vert2;
 			if (dot1>=0) {
-				verticesA.push_back(edges[i].vert1);
-				verticesB.push_back(edges[i].vert2);
+				verticesA.push_back(vert1);
+				verticesB.push_back(vert2);
 			}
 			else {
-				verticesA.push_back(edges[i].vert2);
-				verticesB.push_back(edges[i].vert1);
+				verticesA.push_back(vert2);
+				verticesB.push_back(vert1);
 			}
 		}
 	}
+
+	/*glBegin(GL_LINES);
+	for (size_t i=0;i<verticesA.size();++i) {
+		glVertex3f(verticesA[i].x,verticesA[i].y,verticesA[i].z);
+		glVertex3f(verticesB[i].x,verticesB[i].y,verticesB[i].z);
+	}
+	glEnd();*/
 
 	/*glBegin(GL_LINES);
 	for (size_t i=0;i<verticesA.size();++i) {
@@ -218,7 +359,6 @@ void Model::renderShadow(Vec3d lightPos) {
 	glEnd();*/
 
 	// Render shadow
-	//glColor3f(0.0,0.0,0.0);
 	glBegin(GL_QUADS);
 	for (size_t i=0;i<verticesA.size();++i) {
 		glVertex3f(verticesA[i].x,verticesA[i].y,verticesA[i].z);
