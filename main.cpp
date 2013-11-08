@@ -45,7 +45,7 @@
 	#define CH3 r
 #endif
 
-#define MODEL_DEBUG 1
+#define MODEL_DEBUG 0
 
 //
 // Camera configuration.
@@ -100,6 +100,8 @@ GLuint videoTexture;
 Light mainLight;
 
 Physics world;
+
+	//world. ->setInternalTickCallback(myTickCallback);
 
 ARUint8 overlayBuffer[640*480*4];
 ARUint8 *doubleBuffer;
@@ -264,22 +266,42 @@ void drawClub(double b1[3][4]){
 	double mat1[3][4],mat2[3][4],mat3[3][4];
 
 	
-	printf("\n");
+	//printf("\n");
 	//print_arr(b2);
 
 	arUtilMatInv(b1, mat2);
 	arUtilMatMul(mat2, club_trans , mat1);
 
     //arUtilMatInv(mat1, mat2);
-	arUtilMatInv(mat1,mat3);
+	//arUtilMatInv(mat1,mat3);
 	//arUtilMatMul(club_trans, mat2 , mat1);
-	double x = mat3[0][3];
-	double y = mat3[1][3];
-	double z = mat3[2][3];
-    printf("%f %f %f\n",x,y, z);
-	print_arr(mat1);
-	world.updateClub(y,-z,x);
+	//double x = mat3[0][3];
+	//double y = mat3[1][3];
+	//double z = mat3[2][3];
+   // printf("%f %f %f\n",x,y, z);
 	
+	glPushMatrix();
+
+
+		glRotated(90,0,0,1);
+
+		argConvGlpara(mat1,gl_para);
+		glLoadMatrixd(gl_para);
+		
+		GLfloat glMatrix[4][4];
+		glGetFloatv(GL_MODELVIEW_MATRIX, &glMatrix[0][0]);
+
+		double x = glMatrix[3][0];
+		double y = glMatrix[3][1];
+		double z = glMatrix[3][2];
+
+		if(z<0)z=0;
+			
+		printf("%f %f %f\n",x,y, z);
+	glPopMatrix();
+
+	world.updateClub(x,z,-y);
+	//world.updateClub(x,y,z);
 
 	btScalar	m[16];
 	glPushMatrix();
@@ -376,9 +398,9 @@ void mainLoop(void)
 
 	drawObject( config->trans, config->marker[0].trans, 0);
 	//drawObject( config->trans, config->marker[0].trans, 1);
-	drawClub(config->trans);
-	//if(club_visible) 
-
+	
+	if(club_visible) 
+		drawClub(config->trans);
 
 	glDisable( GL_LIGHTING );
 	glDisable( GL_DEPTH_TEST );
@@ -539,6 +561,8 @@ void init( void )
 	glGenTextures(1, &videoTexture);
 	glBindTexture(GL_TEXTURE_2D, 1);
 	glDisable(GL_TEXTURE_2D);
+
+
 }
 
 /* cleanup function called when program exits */

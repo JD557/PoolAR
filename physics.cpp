@@ -3,6 +3,13 @@
 #include <iostream>
 #include "Assets/floor.h"
 
+int Physics::ballCollidesWith = COL_BALL|COL_TABLE|COL_CLUB;
+int Physics::tableCollidesWith = COL_BALL;
+int Physics::clubCollidesWith = COL_BALL;
+
+
+
+
 Physics::Physics(){
 	broadphase = new btDbvtBroadphase();
     collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -11,11 +18,13 @@ Physics::Physics(){
     dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,broadphase,solver,collisionConfiguration);
     dynamicsWorld->setGravity(btVector3(0,-10,0));
 
+	
+
 	balls.reserve(15);
 
 	//shapes
     ballShape = new btSphereShape(3.5);//new btSphereShape(4.53);
-	groundShape = new btBoxShape(btVector3(btScalar(100.),btScalar(50.),btScalar(100.)));
+	//groundShape = new btBoxShape(btVector3(btScalar(100.),btScalar(50.),btScalar(100.)));
 	
 
 	//m_collisionShapes.push_back(groundShape);
@@ -38,16 +47,31 @@ Physics::Physics(){
 	for(int i=0; i<15; ++i){
 		btRigidBody* ballRigidBody = createBall(i);
 		balls.push_back(ballRigidBody);
-		dynamicsWorld->addRigidBody(ballRigidBody);
+		dynamicsWorld->addRigidBody(ballRigidBody, COL_BALL, Physics::ballCollidesWith);
 	}
 	
 	
 	createFloor();
-	
 	initClub();
+
+	dynamicsWorld->setInternalTickCallback(myTickCallback, static_cast<void *>(this));
+
+	
+	
 	
 	//fallRigidBody->setLinearVelocity( btVector3(0,0,0) );
 	
+}
+
+void Physics::myTickCallback(btDynamicsWorld *world, btScalar timeStep){
+	Physics *w = static_cast<Physics *>(world->getWorldUserInfo());
+    
+	for(int i=0; i< w->getBalls().size(); ++i){
+		btRigidBody* b = w->getBalls()[i];
+		btVector3 velocity = b->getLinearVelocity();
+		if(velocity[1] > 0) velocity[1]=0;
+		b->setLinearVelocity(velocity);
+	}
 }
 
 Physics::~Physics(){
@@ -129,15 +153,15 @@ btRigidBody* Physics::createBall(int n){
 	groundTransform.setIdentity();
 	groundTransform.setOrigin(position);
 	btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
-    btScalar mass = 1.8;
+    btScalar mass = 0.75;
     btVector3 localInertia(0,0,0);
 	ballShape->calculateLocalInertia(mass,localInertia);
     btRigidBody::btRigidBodyConstructionInfo fallRigidBodyInfo(mass,myMotionState,ballShape,localInertia);
     btRigidBody* ballRigidBody = new btRigidBody(fallRigidBodyInfo);
-	ballRigidBody->setFriction(0.4f);
-	ballRigidBody->setRestitution(0.95f);
-	ballRigidBody->setDamping(0.2f,0.1f);
-	ballRigidBody->setRollingFriction(0.4f);
+	ballRigidBody->setFriction(0.1f);
+	ballRigidBody->setRestitution(0.9f);
+	//ballRigidBody->setDamping(0.2f,0.1f);
+	ballRigidBody->setRollingFriction(0.1f);
 	return ballRigidBody;
 }
 
@@ -161,12 +185,13 @@ void Physics::createFloor(){
 	btDefaultMotionState* myMotionStatee = new btDefaultMotionState(groundTransformm);
 	btRigidBody::btRigidBodyConstructionInfo rbInfo(massg,myMotionStatee,trimesh,localInertiaaa);
 	btRigidBody* body = new btRigidBody(rbInfo);
-	dynamicsWorld->addRigidBody(body);
-	body->setFriction(3.4f);
+	dynamicsWorld->addRigidBody(body,COL_TABLE,Physics::tableCollidesWith);
+	body->setFriction(3.5f);
+	body->setRestitution(0.7);
 }
 
 void Physics::initClub(){
-	btVector3 position = btVector3(10,1,10);
+	btVector3 position = btVector3(0,0,0);
 	
 	btTransform transform;
 	transform.setIdentity();
@@ -177,15 +202,15 @@ void Physics::initClub(){
 	ballShape->calculateLocalInertia(mass,localInertia);
     btRigidBody::btRigidBodyConstructionInfo fallRigidBodyInfo(mass,myMotionState,ballShape,localInertia);
     club = new btRigidBody(fallRigidBodyInfo);
-	club->setFriction(1.4f);
-	club->setRestitution(0.95f);
-	club->setDamping(0.2f,0.1f);
-	club->setRollingFriction(1.4f);
+	club->setFriction(0.6f);
+	club->setRestitution(1);
+	//club->setDamping(0.2f,0.1f);
+	//club->setRollingFriction(0.6f);
 
 	club->setActivationState(DISABLE_DEACTIVATION);
-	dynamicsWorld->addRigidBody(club);
+	dynamicsWorld->addRigidBody(club,COL_CLUB,Physics::clubCollidesWith);
 
-	btVector3 localPivot = club->getCenterOfMassTransform().inverse() * btVector3(0,0,0);
+	btVector3 localPivot = club->getCenterOfMassTransform().inverse() * btVector3(-3,2,0);
 
 	btTransform tr;
 	tr.setIdentity();
