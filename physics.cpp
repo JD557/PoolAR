@@ -44,7 +44,7 @@ Physics::Physics(){
 
 
 	//ball
-	for(int i=0; i<15; ++i){
+	for(int i=0; i<=15; ++i){
 		btRigidBody* ballRigidBody = createBall(i);
 		balls.push_back(ballRigidBody);
 		dynamicsWorld->addRigidBody(ballRigidBody, COL_BALL, Physics::ballCollidesWith);
@@ -86,9 +86,32 @@ Physics::~Physics(){
     delete broadphase;
 }
 
+btVector3 linePos(int n,int l){
+	int nr = 5-l;
+	return btVector3( 7.0+7.0*(n%nr)+0.1+3.5*l, 3.6, 7*l+0.1);
+}
+
+btVector3 calcBallPosition(int n){
+	if(n>0 && n<=5){
+		return linePos(n,0);
+	} else if(n>5 && n<= 9){
+		return linePos(n,1);
+	} else if(n>9 && n<=12){
+		return linePos(n,2);
+	} else if(n>12 && n<=14){
+		return linePos(n,3);
+	} else if(n==15){
+		return linePos(n,4);
+	} else {
+		btVector3 b = linePos(14,4);
+		b[2]=60;
+		return b;
+	} 
+}
+
 btRigidBody* Physics::createBall(int n){
 	btVector3 position = btVector3(1,0,1);
-
+	/*
 	switch (n)
 	{
 	case 1:
@@ -145,10 +168,16 @@ btRigidBody* Physics::createBall(int n){
 		position[0]=-50;
 		position[2]+=0;
 	}
-	*/
+	
 	position[1]=5;
 	position[0]+=20;
 	position[2]+=20;
+	*/
+
+	position=calcBallPosition(n);
+	position[0]+=16;
+	position[2]+=23;
+
 	btTransform groundTransform;
 	groundTransform.setIdentity();
 	groundTransform.setOrigin(position);
