@@ -44,7 +44,6 @@
 	#define CH2 g
 	#define CH3 r
 #endif
-
 #define MODEL_DEBUG 0
 
 //
@@ -56,7 +55,7 @@ string cparam_name = "Data\\camera_para.dat";
 string config_name = "Data\\marker.dat";
 char *club_path      = "Data\\club.pat";
 #else
-string vconf          = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+string vconf          = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 string cparam_name    = "Data/camera_para.dat";
 string config_name    = "Data/marker.dat";
 char *club_path       = "Data/club.pat";
@@ -352,6 +351,7 @@ void mainLoop(void)
 	if( icount == 0 ) arUtilTimerReset();
 	icount++;
 	argDrawMode2D();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	argDispImage( dataPtr, 0,0 );
 
 	if( arDetectMarker(dataPtr, thresh, &marker_info, &marker_num) < 0 ) {
@@ -389,23 +389,78 @@ void mainLoop(void)
 
 	argDrawMode3D();
 	argDraw3dCamera( 0, 0 );
-	glClearDepth( 1.0 );
-	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	//glClearDepth( 1.00 );
+	glEnable(GL_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_LIGHTING);
 
+	glMatrixMode(GL_MODELVIEW);
+    argConvGlpara(config->trans, gl_para);
+    glLoadMatrixd( gl_para );
+
+    glGetFloatv(GL_MODELVIEW_MATRIX, Model::cameraMatrix);
+
+	// RENDER SCENE
+	glPushMatrix();
 	drawObject( config->trans, config->marker[0].trans, 0);
-	//drawObject( config->trans, config->marker[0].trans, 1);
-	
-	if(club_visible) 
+	glPopMatrix();
+	if(club_visible) {
+		glPushMatrix();
 		drawClub(config->trans);
+		glPopMatrix();
+	}
+
+	// RENDER SHADOWS
+
+    glEnable(GL_STENCIL_TEST);
+	glEnable(GL_CULL_FACE);
+	glColorMask(0,0,0,0);
+	glStencilFunc(GL_ALWAYS,0,0xFFFFFFFFL);
+	glDepthMask( GL_FALSE );
+	glStencilOp(GL_KEEP,GL_KEEP,GL_INCR);
+	glCullFace(GL_BACK);
+	glPushMatrix();
+	drawObject( config->trans, config->marker[0].trans, 1);
+	glPopMatrix();
+	glCullFace(GL_FRONT);
+	glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
+	glPushMatrix();
+	drawObject( config->trans, config->marker[0].trans, 1);
+	glPopMatrix();
+	glColorMask(1,1,1,1);
+	glStencilFunc( GL_NOTEQUAL, 0, 0xFFFFFFFFL );
+	glStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
 
 	glDisable( GL_LIGHTING );
 	glDisable( GL_DEPTH_TEST );
 
+	glPushMatrix();
+    glLoadIdentity();
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_LIGHTING);
+    glColor4f(0.0,0.0,0.0,0.5);
+    glEnable(GL_BLEND);
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glBegin( GL_QUADS );
+        glVertex3f(-30, 30,50);
+        glVertex3f(-30,-30,50);
+        glVertex3f( 30,-30,50);
+        glVertex3f( 30, 30,50);
+    glEnd();
+    glDisable(GL_BLEND);
+    glPopMatrix();
+	glDepthMask( GL_TRUE );
+	glDisable(GL_STENCIL_TEST);
+	glColor3f(1.0,1.0,1.0);
+	glDepthMask( GL_TRUE );
+
 	argDrawMode2D();
+	int deltaY=240;
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_ALPHA);
 	glEnable(GL_BLEND);
@@ -413,7 +468,6 @@ void mainLoop(void)
 	glBindTexture(GL_TEXTURE_2D,videoTexture);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
 	glEnable(GL_COLOR_MATERIAL);
-	int deltaY=240;
 	glBegin(GL_QUADS);
 		glTexCoord2d(0,1); glVertex2f(0, 0+deltaY);
 		glTexCoord2d(1,1); glVertex2f(640, 0+deltaY);
@@ -454,7 +508,6 @@ void mainLoop(void)
 	draw_table_always(1);
 	glPopMatrix();*/
 
-	glEnable(GL_STENCIL_TEST);
 	glEnable(GL_CULL_FACE);
 	glColorMask(0,0,0,0);
 	glStencilFunc(GL_ALWAYS,0,0xFFFFFFFFL);
@@ -492,6 +545,8 @@ void mainLoop(void)
 	glutSwapBuffers();
 	glFlush();
 	glDisable(GL_STENCIL_TEST);
+	glutSwapBuffers();
+	glFlush();
 #endif
 	
 }
@@ -548,7 +603,7 @@ void init( void )
 
 	// Setup Lights
 	//mainLight.setPosition(100.0,-200.0,200.0);
-	mainLight.setPosition(10.0,-20.0,20.0);
+	mainLight.setPosition(200.0,-50.0,200.0);
 	mainLight.setAmbient(0.1, 0.1, 0.1);
 	mainLight.setColor(0.9, 0.9, 0.9);
 
@@ -611,11 +666,6 @@ void drawObject( double trans1[3][4], double trans2[3][4], int renderMode)
 {
     
     if (renderMode==0) {
-		glMatrixMode(GL_MODELVIEW);
-	    argConvGlpara(trans1, gl_para);
-	    glLoadMatrixd( gl_para );
-	    //argConvGlpara(trans2, gl_para);
-	    //glMultMatrixd( gl_para );
 
 	    glEnable(GL_LIGHTING);
 	    mainLight.use();
@@ -649,17 +699,12 @@ void drawObject( double trans1[3][4], double trans2[3][4], int renderMode)
 		glDisable(GL_CULL_FACE);
 	}
 	else if (renderMode==1) {
-		glMatrixMode(GL_MODELVIEW);
-	    argConvGlpara(trans1, gl_para);
-	    glLoadMatrixd( gl_para );
-	    argConvGlpara(trans2, gl_para);
-	    glMultMatrixd( gl_para );
 
 	    glDisable(GL_LIGHTING);
 
 		glEnable(GL_CULL_FACE);
 
-		table.renderShadow(mainLight.getPos());
+		//table.renderShadow(mainLight.getPos());
 
 		btScalar	m[16];
 		for(int i=0; i< world.getBalls().size(); ++i){
@@ -717,7 +762,7 @@ void draw_table_always(int renderMode){
 	else if (renderMode==1) {
 		glTranslated(mx,my,mz);
 
-		//table.renderShadow(mainLight.getPos());
+		table.renderShadow(mainLight.getPos());
 
 		btScalar	m[16];
 		
