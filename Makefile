@@ -2,8 +2,8 @@ LDFLAG=-pthread -lgstreamer-0.10 -lgobject-2.0 -lgmodule-2.0 -lgthread-2.0 -lrt 
 LIBS= -lARgsub -lARvideo -lARMulti -lAR -lpthread -lglut -lGLU -lGL -lGLEW -lXi -lX11 -lm -lBulletSoftBody -lBulletDynamics -lBulletCollision -lLinearMath
 CFLAG= -std=c++11 -fopenmp -pg -O -pthread -I/usr/include/gstreamer-0.10 -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/libxml2 -I/usr/X11R6/include -Ibullet/include
 
-main: main.cpp model.o tiny_obj_loader.o physics.o imgproc.o light.o
-	g++ main.cpp model.cpp tiny_obj_loader.cpp physics.cpp light.cpp imgproc.cpp -o main $(CFLAG) $(LDFLAG) $(LIBS)
+main: main.cpp model.o tiny_obj_loader.o physics.o imgproc.o light.o vectorMath.o
+	g++ main.cpp model.cpp tiny_obj_loader.cpp physics.cpp light.cpp imgproc.cpp vectorMath.cpp -o main $(CFLAG) $(LDFLAG) $(LIBS)
 
 model.o: model.cpp tiny_obj_loader.o
 	g++ -c model.cpp -o model.o $(CFLAG)
@@ -19,6 +19,9 @@ physics.o: physics.cpp
 
 light.o: light.cpp
 	g++ -c light.cpp -o light.o $(CFLAG)
+
+vectorMath.o: vectorMath.cpp
+	g++ -c vectorMath.cpp -o vectorMath.o $(CFLAG)
 
 clean:
 	rm -f *.o

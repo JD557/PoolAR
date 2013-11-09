@@ -45,7 +45,6 @@
 	#define CH2 g
 	#define CH3 r
 #endif
-#define MODEL_DEBUG 0
 
 //
 // Camera configuration.
@@ -54,12 +53,12 @@
 string vconf       = "Data\\WDM_camera_flipV.xml";
 string cparam_name = "Data\\camera_para.dat";
 string config_name = "Data\\marker.dat";
-char *club_path      = "Data\\club.pat";
+string club_path      = "Data\\club.pat";
 #else
-string vconf          = "v4l2src device=/dev/video1 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
+string vconf          = "v4l2src device=/dev/video0 use-fixed-fps=false ! ffmpegcolorspace ! capsfilter caps=video/x-raw-rgb,bpp=24,width=640,height=480 ! identity name=artoolkit ! fakesink";
 string cparam_name    = "Data/camera_para.dat";
 string config_name    = "Data/marker.dat";
-char *club_path       = "Data/club.pat";
+string club_path       = "Data/club.pat";
 #endif
 
 int             club_id;
@@ -68,6 +67,8 @@ double          club_center[2] = {0.0, 0.0};
 double          club_trans[3][4];
 
 int xsize, ysize;
+float zoom = 1.5;
+int fullScreen = 0;
 int thresh = 100;
 int icount = 0;
 
@@ -75,8 +76,6 @@ int FRAME_RATE     = 60;
 btScalar TICK_RATE = 1.0/FRAME_RATE;
 int  DELTA_T       = 1000.0/FRAME_RATE;
 
-
-GLUquadric* glQ;
 ARParam cparam;
 ARMultiMarkerInfoT *config;
 
@@ -102,29 +101,9 @@ Light mainLight;
 
 Physics world;
 
-	//world. ->setInternalTickCallback(myTickCallback);
 
-ARUint8 overlayBuffer[640*480*4];
+ARUint8 *overlayBuffer;
 ARUint8 *doubleBuffer;
-
-//mode debug
-#if MODEL_DEBUG
-void draw_table_always(int renderMode);
-float xy_aspect = (float)640 / (float)720;
-double cam_up_vec[] = { 0 , 1 , 0};
-int VIEW_MODE=0, NR_VIEW_MODE=2;
-
-
-double model_debug_camera[2][6]  = {{0,0,192,-35,59,0},
-								   {0,-127,93,-38,79,-2}};
-
-double tx=model_debug_camera[VIEW_MODE][0],
-	   ty=model_debug_camera[VIEW_MODE][1],
-	   tz=model_debug_camera[VIEW_MODE][2],
-	   mx=model_debug_camera[VIEW_MODE][3],
-	   my=model_debug_camera[VIEW_MODE][4],
-	   mz=model_debug_camera[VIEW_MODE][5];
-#endif
 
 int main(int argc, char **argv)
 {
@@ -166,39 +145,6 @@ void   keyEvent( unsigned char key, int x, int y)
 			world.getBalls()[0]->forceActivationState(1);
 			world.getBalls()[0]->setLinearVelocity(btVector3(1,0,1)*40);
 		break;
-		case 'o':club_x=20;club_y=20;club_z=20;;world.updateClub(club_x,club_y,club_z);break;
-		case 'k':club_x=10;club_y=10;club_z=10;;world.updateClub(club_x,club_y,club_z);break;
-		case 'l':--club_x;world.updateClub(club_x,club_y,club_z);break;
-		case 'ç':--club_z;world.updateClub(club_x,club_y,club_z);break;
-    #if MODEL_DEBUG // MODEL DEBUG ONLY KEYS
-        case '\\': // Change view mode
-        	if(++VIEW_MODE==NR_VIEW_MODE) {VIEW_MODE=0;}
-			
-			tx=model_debug_camera[VIEW_MODE][0];
-			ty=model_debug_camera[VIEW_MODE][1];
-			tz=model_debug_camera[VIEW_MODE][2];
-			mx=model_debug_camera[VIEW_MODE][3];
-			my=model_debug_camera[VIEW_MODE][4];
-			mz=model_debug_camera[VIEW_MODE][5];
-			break;
-
-		case 'q':printf("x: %f\n", ++tx);break;
-		case 'w':printf("x: %f\n", ++ty);break;
-		case 'e':printf("x: %f\n", ++tz);break;
-		case 'z':printf("x: %f\n", --tx);break;
-		case 'x':printf("y: %f\n", --ty);break;
-		case 'c':printf("y: %f\n", --ty);break;
-		case 'r':printf("xxx: %f\n", ++mx);break;
-		case 't':printf("yyy: %f\n", ++my);break;
-		case 'y':printf("zzz: %f\n", ++mz);break;
-		case 'v':printf("xxx: %f\n", --mx);break;
-		case 'b':printf("yyy: %f\n", --my);break;
-		case 'n':printf("zzz: %f\n", --mz);break;
-		/*case 'o':club_x+=20;world.updateClub(club_x,club_y,club_z);break;
-		case 'k':++club_z;world.updateClub(club_x,club_y,club_z);break;
-		case 'l':--club_x;world.updateClub(club_x,club_y,club_z);break;
-		case 'ç':--club_z;world.updateClub(club_x,club_y,club_z);break;*/
-	#endif
     }
 }
 
@@ -241,45 +187,15 @@ void generateOverMask(ARUint8 *dataIn,ARUint8 *dataOut,int w, int h,int minSat,i
 	alphaErode(dataOut,w/2,h/2);
 	upscaleAlpha(dataOut,w,h);
 	alphaGaussianBlur(dataOut,w,h);
-	//alphaHisteresis(dataOut,w,h,125,150);
-	/* ALPHA DEBUG */
-	/*for (size_t i=0;i<w*h;i++) {
-		dataOut[4*i]=dataOut[4*i+3];
-		dataOut[4*i+1]=dataOut[4*i+3];
-		dataOut[4*i+2]=dataOut[4*i+3];
-	}*/
 
-}
-
-void print_arr(double arr[3][4]) {
-	for(int i=0;i< 3;++i) {
-		for(int j = 0; j< 4; ++j) {
-			printf("%f ", arr[i][j]);
-		}
-
-		printf("\n");
-	}
-	printf("\n");
 }
 
 void drawClub(double b1[3][4]){
 	
 	double mat1[3][4],mat2[3][4],mat3[3][4];
 
-	
-	//printf("\n");
-	//print_arr(b2);
-
 	arUtilMatInv(b1, mat2);
 	arUtilMatMul(mat2, club_trans , mat1);
-
-    //arUtilMatInv(mat1, mat2);
-	//arUtilMatInv(mat1,mat3);
-	//arUtilMatMul(club_trans, mat2 , mat1);
-	//double x = mat3[0][3];
-	//double y = mat3[1][3];
-	//double z = mat3[2][3];
-   // printf("%f %f %f\n",x,y, z);
 	
 	glPushMatrix();
 
@@ -297,29 +213,10 @@ void drawClub(double b1[3][4]){
 		double z = glMatrix[3][2];
 
 		if(z<0)z=0;
-			
-		//printf("%f %f %f\n",x,y, z);
+
 	glPopMatrix();
 
 	world.updateClub(x,z,-y);
-	//world.updateClub(x,y,z);
-	/*
-	btScalar	m[16];
-	glPushMatrix();
-	btRigidBody* body=btRigidBody::upcast(world.club);
-	if(body&&body->getMotionState())
-	{
-		btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
-		myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
-		glRotated(90,1,0,0);
-			glMultMatrixf(m);
-		ball.render();
-	}
-	glPopMatrix();
-	printf("club: %f %f %f\n", world.club->getCenterOfMassPosition()[0],world.club->getCenterOfMassPosition()[1],world.club->getCenterOfMassPosition()[2]);
-	*/
-    //argConvGlpara(club_trans, gl_para);
-    //glLoadMatrixd( gl_para );
 
 	argConvGlpara(mat1, gl_para);
 	glMultMatrixd(gl_para);
@@ -333,8 +230,6 @@ void drawClub(double b1[3][4]){
 /* main loop */
 void mainLoop(void)
 {
-	
-#if MODEL_DEBUG == 0 //Normal Mode
 	ARUint8         *dataPtr;
 	ARMarkerInfo    *marker_info;
 	int             marker_num;
@@ -382,16 +277,15 @@ void mainLoop(void)
 	
 
 	if (needsUpdate) {
-		generateOverMask(dataPtr,overlayBuffer,640,480,15,30);
+		generateOverMask(dataPtr,overlayBuffer,xsize,ysize,15,30);
 		glBindTexture(GL_TEXTURE_2D,videoTexture);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); // Linear Filtering
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, 640, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, overlayBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, xsize, ysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, overlayBuffer);
 	}
 
 	argDrawMode3D();
 	argDraw3dCamera( 0, 0 );
-	//glClearDepth( 1.00 );
 	glEnable(GL_ALPHA);
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -422,7 +316,6 @@ void mainLoop(void)
 	
 
 	// RENDER SHADOWS
-
     glEnable(GL_STENCIL_TEST);
 	glEnable(GL_CULL_FACE);
 	glColorMask(0,0,0,0);
@@ -437,6 +330,15 @@ void mainLoop(void)
 	glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
 	glPushMatrix();
 	drawObject( config->trans, config->marker[0].trans, 1);
+	glCullFace(GL_BACK);
+	// Fix shadow artifacts
+	glStencilOp(GL_KEEP,GL_KEEP,GL_ZERO);
+	glBegin(GL_QUADS);
+		glVertex3f(300, -300, -20);
+		glVertex3f(300, 300, -20);
+		glVertex3f(-300, 300, -20);
+		glVertex3f(-300, -300, -20);
+	glEnd();
 	glPopMatrix();
 	glColorMask(1,1,1,1);
 	glStencilFunc( GL_NOTEQUAL, 0, 0xFFFFFFFFL );
@@ -466,7 +368,6 @@ void mainLoop(void)
 	glDepthMask( GL_TRUE );
 
 	argDrawMode2D();
-	int deltaY=240;
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_ALPHA);
 	glEnable(GL_BLEND);
@@ -475,10 +376,10 @@ void mainLoop(void)
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
 	glEnable(GL_COLOR_MATERIAL);
 	glBegin(GL_QUADS);
-		glTexCoord2d(0,1); glVertex2f(0, 0+deltaY);
-		glTexCoord2d(1,1); glVertex2f(640, 0+deltaY);
-		glTexCoord2d(1,0); glVertex2f(640, 480+deltaY);
-		glTexCoord2d(0,0); glVertex2f(0, 480+deltaY);
+		glTexCoord2d(0,1); glVertex2f(0, 0);
+		glTexCoord2d(1,1); glVertex2f(xsize*zoom, 0);
+		glTexCoord2d(1,0); glVertex2f(xsize*zoom, ysize*zoom);
+		glTexCoord2d(0,0); glVertex2f(0, ysize*zoom);
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_COLOR_MATERIAL);
@@ -486,75 +387,6 @@ void mainLoop(void)
 	glDisable(GL_BLEND);
 	
 	argSwapBuffers();
-#else // Debug Mode
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
-	glMatrixMode( GL_PROJECTION );
-	glLoadIdentity();	
-	glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 500.0 );
-	glMatrixMode( GL_MODELVIEW );
-	glLoadIdentity();
-	gluLookAt(tx,ty,tz,0,0,0,cam_up_vec[0],cam_up_vec[1],cam_up_vec[2]);
-	glEnable(GL_LIGHTING);
-	mainLight.use();
-	glPointSize(10.0);
-	glBegin(GL_POINTS);
-		glVertex3f(mainLight.getPos().x,mainLight.getPos().y,mainLight.getPos().z);
-	glEnd();
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glPushMatrix();
-	glGetFloatv(GL_MODELVIEW_MATRIX, Model::cameraMatrix);
-	glDisable(GL_STENCIL_TEST);
-	glCullFace(GL_FRONT);
-	draw_table_always(0);
-	glPopMatrix();
-
-	/*glPushMatrix();
-	//glCullFace(GL_FRONT);
-	draw_table_always(1);
-	glPopMatrix();*/
-
-	glEnable(GL_CULL_FACE);
-	glColorMask(0,0,0,0);
-	glStencilFunc(GL_ALWAYS,0,0xFFFFFFFFL);
-	glDepthMask( GL_FALSE );
-	glStencilOp(GL_KEEP,GL_KEEP,GL_INCR);
-	glCullFace(GL_BACK);
-	glPushMatrix();
-	draw_table_always(1);
-	glPopMatrix();
-	glCullFace(GL_FRONT);
-	glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
-	glPushMatrix();
-	draw_table_always(1);
-	glPopMatrix();
-	glColorMask(1,1,1,1);
-	glStencilFunc( GL_NOTEQUAL, 0, 0xFFFFFFFFL );
-	glStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
-
-   	glPushMatrix();
-    glLoadIdentity();
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_LIGHTING);
-    glColor4f(0.0,0.0,0.0,0.5);
-    glEnable(GL_BLEND);
-    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-    glBegin( GL_TRIANGLE_STRIP );
-        glVertex3f(-0.1f, 0.1f,-0.10f);
-        glVertex3f(-0.1f,-0.1f,-0.10f);
-        glVertex3f( 0.1f, 0.1f,-0.10f);
-        glVertex3f( 0.1f,-0.1f,-0.10f);
-    glEnd();
-    glDisable(GL_BLEND);
-    glPopMatrix();
-	glDepthMask( GL_TRUE );
-	glutSwapBuffers();
-	glFlush();
-	glDisable(GL_STENCIL_TEST);
-	glutSwapBuffers();
-	glFlush();
-#endif
-	
 }
 
 void init( void )
@@ -583,16 +415,18 @@ void init( void )
         exit(0);
     }
 
-	if( (club_id=arLoadPatt(club_path)) < 0 ) {
+	if( (club_id=arLoadPatt(club_path.c_str())) < 0 ) {
         printf("pattern load error !!\n");
         exit(0);
     }
 
     /* open the graphics window */
-    argInit( &cparam, 1.0, 0, 2, 1, 0 );
+    argInit( &cparam, zoom, fullScreen, 0, 0, 0 );
     arFittingMode   = AR_FITTING_TO_IDEAL;
+    //arImageProcMode = AR_IMAGE_PROC_IN_FULL;
     arImageProcMode = AR_IMAGE_PROC_IN_HALF;
     argDrawMode     = AR_DRAW_BY_TEXTURE_MAPPING;
+    //argTexmapMode   = AR_DRAW_TEXTURE_FULL_IMAGE;
     argTexmapMode   = AR_DRAW_TEXTURE_HALF_IMAGE;
 
     // Setup Physics
@@ -608,16 +442,15 @@ void init( void )
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
 	// Setup Lights
-	//mainLight.setPosition(100.0,-200.0,200.0);
 	mainLight.setPosition(200.0,-50.0,200.0);
 	mainLight.setAmbient(0.1, 0.1, 0.1);
 	mainLight.setColor(0.9, 0.9, 0.9);
 
 	// Setup Models
-	glQ = gluNewQuadric();
 	loadModels();
 
 	// Setup overdraw
+	overlayBuffer=(ARUint8*)malloc(xsize*ysize*4);
 	glEnable(GL_TEXTURE_2D);
 	glGenTextures(1, &videoTexture);
 	glBindTexture(GL_TEXTURE_2D, 1);
@@ -655,7 +488,6 @@ void renderHoles() {
 	glTranslated(74.92,-59.23,0.0);
 	hole.render();
 	glPopMatrix();
-
 
 	glPushMatrix();
 	glTranslated(74.92,-118.47,0.0);
@@ -729,69 +561,6 @@ void drawObject( double trans1[3][4], double trans2[3][4], int renderMode)
 	}
 }
 
-#if MODEL_DEBUG
-void draw_table_always(int renderMode){
-
-	if (renderMode==0) {
-		glTranslated(mx,my,mz);
-
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glColorMask(0,0,0,0);
-		hole.render();
-		glColorMask(1,1,1,1);
-		table.render();
-
-		btScalar	m[16];
-		
-		for(int i=0; i< world.getBalls().size(); ++i){
-			glPushMatrix();
-
-			btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
-			if(body&&body->getMotionState())
-			{
-				btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
-				myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
-			}
-		
-			glRotated(90,1,0,0);
-			glMultMatrixf(m);
-		
-			balls[i].render();
-			glPopMatrix();
-		}
-		glCullFace(GL_FRONT);
-		hole.render();
-		glCullFace(GL_BACK);
-		glDisable(GL_CULL_FACE);
-	}
-	else if (renderMode==1) {
-		glTranslated(mx,my,mz);
-
-		table.renderShadow(mainLight.getPos());
-
-		btScalar	m[16];
-		
-		for(int i=0; i< world.getBalls().size(); ++i){
-			glPushMatrix();
-
-			btRigidBody* body=btRigidBody::upcast(world.getBalls()[i]);
-			if(body&&body->getMotionState())
-			{
-				btDefaultMotionState* myMotionState = (btDefaultMotionState*)body->getMotionState();
-				myMotionState->m_graphicsWorldTrans.getOpenGLMatrix(m);
-			}
-		
-			glRotated(90,1,0,0);
-			glMultMatrixf(m);
-		
-			ball.renderShadow(mainLight.getPos());
-			glPopMatrix();
-		}
-	}
-}
-#endif
-
 void loadModels() {
 	table = Model("Assets/pool.obj");
 	ball = Model("Assets/ball.obj");
@@ -810,7 +579,6 @@ void loadModels() {
 size_t lastTick = 0;
 
 void tick(int a){
-	//world.dynamicsWorld->stepSimulation(TICK_RATE);
 	world.dynamicsWorld->stepSimulation((glutGet(GLUT_ELAPSED_TIME)-lastTick)/1000.0,7);
 	lastTick = glutGet(GLUT_ELAPSED_TIME);
 	glutTimerFunc(DELTA_T, tick, 0);
